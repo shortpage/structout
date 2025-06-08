@@ -1,0 +1,2 @@
+# force LF for everything that is text
+* text=auto eol=lf
