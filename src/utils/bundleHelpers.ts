@@ -1,0 +1,168 @@
+/* ------------------------------------------------------------------ *
+ * MIT License © 2025  Sesh Ragavachari
+ * File   : bundleHelpers.ts  – v3.1  (localStorage-first id)
+ * ------------------------------------------------------------------ */
+
+import JSZip from "jszip";
+
+import { generateHelperFiles } from "./ideHelperGenerator";
+import {
+  PROVIDERS,
+  PROVIDER_META,
+  ProviderId,
+  ModelKey,
+} from "./providerRegistry";
+import jsonSchemaGenerator, {
+  SchemaField,
+} from "../components/jsonSchemaGenerator";
+
+/* ───────── helpers ─────────────────────────────────────────────── */
+const safePy = (s: string) =>
+  (/^[A-Za-z_]/.test(s) ? s : `_${s}`).replace(/[^0-9A-Za-z_]/g, "_");
+
+/* no-op stub: examples are no longer bundled */
+function addExampleFiles(_: JSZip, __?: string): void {}
+
+/* fetch authoring payload the Designer saved/loaded */
+function loadFieldsForId(schemaId: string): SchemaField[] | null {
+  try {
+    const raw = localStorage.getItem(`schema_metadata_${schemaId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed?.fields) ? parsed.fields : null;
+  } catch {
+    return null; // SSR / tests / incognito
+  }
+}
+
+/* quick helper: read metadataName & fields in one go */
+function loadStoredMeta(
+  slug: string,
+): { metadataName?: string; fields?: SchemaField[] } | null {
+  try {
+    const raw = localStorage.getItem(`schema_metadata_${slug}`);
+    return raw
+      ? (JSON.parse(raw) as { metadataName?: string; fields?: SchemaField[] })
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/* peel nested “type=json_schema” wrappers (legacy path) */
+type MaybeWrapped = { type?: string; json_schema?: { schema?: unknown } };
+
+const stripWrappers = (node: unknown): unknown => {
+  let cur: unknown = node;
+  while (
+    typeof cur === "object" &&
+    cur !== null &&
+    (cur as MaybeWrapped).type === "json_schema" &&
+    (cur as MaybeWrapped).json_schema?.schema
+  ) {
+    cur = (cur as MaybeWrapped).json_schema!.schema;
+  }
+  return cur;
+};
+
+/* ───────── main API ────────────────────────────────────────────── */
+export async function buildZipBundle(
+  rawSchemaJson: string,
+  _provider?: ProviderId,
+  exampleName?: string, // retained for API backward-compat (ignored)
+  overrideId?: string, // still works if a caller wants to force it
+): Promise<{ blob: Blob; id: string }> {
+  /* — 0.  Parse designer JSON —————————————————————————— */
+  const rootObj = JSON.parse(rawSchemaJson);
+
+  /* — 1.  Find the best identifier ———————————————— */
+  //   Priority:
+  //     1) explicit overrideId from caller
+  //     2) metadataName saved in localStorage
+  //     3) metadataName inside the JSON (rare)
+  //     4) title / name inside the JSON
+  //     5) fallback "schema"
+  let rawId = rootObj.metadataName || rootObj.title || rootObj.name || "schema";
+
+  // check localStorage first (unless caller forces overrideId)
+  if (!overrideId) {
+    const meta = loadStoredMeta(safePy(rawId)); // slugged key
+    if (meta?.metadataName) rawId = meta.metadataName;
+  }
+
+  // caller always wins
+  if (overrideId) rawId = overrideId;
+
+  const schemaId = safePy(rawId); // -> “test”
+  const bundleId = `${schemaId}_api`; // -> “test_api”
+
+  /* — 2.  Load pristine field list (if saved) ————————— */
+  const fields = loadFieldsForId(schemaId);
+
+  /* — 3.  Build ZIP structure ——————————————————————— */
+  const zip = new JSZip();
+  const rootFolder = zip.folder(bundleId)!;
+
+  /* —— top-level Pydantic model (needs a clean Draft-7 core) —— */
+  {
+    const coreSchema = fields
+      ? jsonSchemaGenerator({
+          fields,
+          name: schemaId,
+          description: "", // description unused for model
+          headerRule: "[]",
+        })
+      : stripWrappers(rootObj); // legacy fallback
+
+    const { filenameModel, modelCode } = generateHelperFiles(
+      JSON.stringify({ json_schema: { name: schemaId, schema: coreSchema } }),
+      undefined,
+      undefined,
+      schemaId,
+    );
+    rootFolder.file(filenameModel, modelCode);
+  }
+
+  /* (examples stub – remains a no-op) */
+  addExampleFiles(rootFolder.folder("input")!, exampleName);
+
+  /* —— provider-specific bundles —— */
+  for (const provider of PROVIDERS) {
+    const pFolder = rootFolder.folder(provider)!;
+    const headerRule = await PROVIDER_META[provider].getHeaderRule();
+
+    const providerSchemaObj = fields
+      ? jsonSchemaGenerator({
+          fields,
+          name: schemaId,
+          description: rootObj.description ?? `Schema for ${schemaId}`,
+          headerRule,
+        })
+      : jsonSchemaGenerator({
+          baseSchema: stripWrappers(rootObj) as Record<string, unknown>,
+          name: schemaId,
+          description: rootObj.description ?? `Schema for ${schemaId}`,
+          headerRule,
+        });
+
+    pFolder.file(
+      `${schemaId}_schema.json`,
+      JSON.stringify(providerSchemaObj, null, 2),
+    );
+
+    const modelDict = PROVIDER_META[provider].models;
+    for (const modelKey of Object.keys(modelDict) as ModelKey[]) {
+      const { mainCode } = generateHelperFiles(
+        JSON.stringify(providerSchemaObj),
+        provider,
+        modelKey,
+        schemaId,
+      );
+      pFolder.file(`${schemaId}_${modelKey}_main.py`, mainCode);
+    }
+  }
+
+  /* — 4.  Generate & return the blob ——————————————— */
+  const blob = await zip.generateAsync({ type: "blob" });
+  return { blob, id: bundleId }; // id === "<metadataName>_api"
+}

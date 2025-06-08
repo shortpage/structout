@@ -1,0 +1,152 @@
+{
+  "metadataName": "chocolatebrownies",
+  "metadataDescription": "Recipe, backstory and tasting-location data for classic U.S. Chocolate Brownies",
+  "fields": [
+    {
+      "id": "a1f5c61d-bc21-4e43-8d17-001cb1eae901",
+      "parentId": null,
+      "parentKey": null,
+      "key": "dessertName",
+      "type": "string",
+      "level": 0,
+      "aiPrompt": "Official name of the dessert (Chocolate Brownies)",
+      "required": false,
+      "locked": true
+    },
+    {
+      "id": "d3a2e7b7-4f74-465e-9306-9c77b5cce902",
+      "parentId": null,
+      "parentKey": null,
+      "key": "backstory",
+      "type": "string",
+      "level": 0,
+      "aiPrompt": "Historical origin story and cultural context",
+      "required": false,
+      "locked": true
+    },
+    {
+      "id": "b6d8394c-8a93-4c77-9f66-5e9cca1ad903",
+      "parentId": null,
+      "parentKey": null,
+      "key": "recipe",
+      "type": "object",
+      "level": 0,
+      "aiPrompt": "Recipe container (ingredients + step-by-step)",
+      "required": false,
+      "locked": false
+    },
+    {
+      "id": "c9ea3f7d-3e47-4e94-bb62-7991d14ae904",
+      "parentId": null,
+      "parentKey": null,
+      "key": "tastingLocations",
+      "type": "array-object",
+      "level": 0,
+      "aiPrompt": "Best U.S. spots where one can taste outstanding brownies",
+      "required": false,
+      "locked": false
+    },
+
+    {
+      "id": "e4a8bd6f-fa52-4204-8266-b4e817ecf905",
+      "parentId": "b6d8394c-8a93-4c77-9f66-5e9cca1ad903",
+      "parentKey": "recipe",
+      "key": "ingredients",
+      "type": "array-string",
+      "level": 1,
+      "aiPrompt": "List of ingredients with amounts",
+      "required": false,
+      "locked": true
+    },
+    {
+      "id": "f5d3c7e4-0ba2-4d0b-a2f4-e2da9b1ff906",
+      "parentId": "b6d8394c-8a93-4c77-9f66-5e9cca1ad903",
+      "parentKey": "recipe",
+      "key": "instructions",
+      "type": "array-string",
+      "level": 1,
+      "aiPrompt": "Ordered baking / assembly steps",
+      "required": false,
+      "locked": true
+    },
+
+    {
+      "id": "0893452d-3e59-42ef-bba4-8a9cd01aa907",
+      "parentId": "c9ea3f7d-3e47-4e94-bb62-7991d14ae904",
+      "parentKey": "tastingLocations",
+      "key": "city",
+      "type": "string",
+      "level": 1,
+      "aiPrompt": "City name (e.g., New York, Chicago)",
+      "required": false,
+      "locked": true
+    },
+    {
+      "id": "1962c1bb-4d6d-4942-aeca-49a1c33ab908",
+      "parentId": "c9ea3f7d-3e47-4e94-bb62-7991d14ae904",
+      "parentKey": "tastingLocations",
+      "key": "establishment",
+      "type": "string",
+      "level": 1,
+      "aiPrompt": "Bakery / café name (e.g., Baked NYC)",
+      "required": false,
+      "locked": true
+    },
+    {
+      "id": "2a76e3df-5b29-4484-889b-3a94fa2b4c09",
+      "parentId": "c9ea3f7d-3e47-4e94-bb62-7991d14ae904",
+      "parentKey": "tastingLocations",
+      "key": "address",
+      "type": "string",
+      "level": 1,
+      "aiPrompt": "Street address of the establishment. Derive it from AI Model using Map Search.",
+      "required": false,
+      "locked": true
+    },
+    {
+      "id": "3c86fa37-8fe9-4d5f-92c2-c6389e3f790a",
+      "parentId": "c9ea3f7d-3e47-4e94-bb62-7991d14ae904",
+      "parentKey": "tastingLocations",
+      "key": "geoLocation",
+      "type": "object",
+      "level": 1,
+      "aiPrompt": "Latitude/Longitude of the establishment",
+      "required": false,
+      "locked": false
+    },
+    {
+      "id": "4d97b8c3-c1e5-4a39-9ab9-3d5155168e0b",
+      "parentId": "c9ea3f7d-3e47-4e94-bb62-7991d14ae904",
+      "parentKey": "tastingLocations",
+      "key": "image",
+      "type": "string",
+      "level": 1,
+      "aiPrompt": "Link to an illustrative image of the location or dessert",
+      "required": false,
+      "locked": true
+    },
+
+    {
+      "id": "5e08cf64-36bb-4a8d-b6a5-48d1f6d19c0c",
+      "parentId": "3c86fa37-8fe9-4d5f-92c2-c6389e3f790a",
+      "parentKey": "geoLocation",
+      "key": "lat",
+      "type": "number",
+      "level": 2,
+      "aiPrompt": "Latitude in decimal degrees of the Address of the Establishment. Derive using the AI Model from Maps sources.",
+      "required": false,
+      "locked": true
+    },
+    {
+      "id": "6f19bf2e-f998-419a-b3b1-2eefc2d1bf0d",
+      "parentId": "3c86fa37-8fe9-4d5f-92c2-c6389e3f790a",
+      "parentKey": "geoLocation",
+      "key": "lon",
+      "type": "number",
+      "level": 2,
+      "aiPrompt": "Longitude in decimal degrees",
+      "required": false,
+      "locked": true
+    }
+  ]
+}

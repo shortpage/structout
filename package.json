@@ -1,0 +1,80 @@
+{
+  "name": "jsonschemagenerator-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "tauri:dev": "tauri dev",
+    "build:web": "tsc && vite build",
+    "build:tauri": "tauri build",
+    "build": "npm run build:web",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "sec:js": "npm audit --production && npx snyk test || true",
+    "sec:rust": "cd src-tauri && cargo audit -q && cargo geiger -q",
+    "sec:code": "npx semgrep --config \"p/tslint-security\"",
+    "sec": "npm run sec:js && npm run sec:rust && npm run sec:code",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --check .",
+    "prune:exports": "ts-prune > ts-prune.txt",
+    "prune:exports:ci": "ts-prune --error",
+    "deps:check": "depcheck",
+    "deps:prune": "npm prune",
+    "test": "vitest run",
+    "deps:audit": "npm audit --production"
+  },
+  "dependencies": {
+    "@mui/icons-material": "^7.1.1",
+    "@mui/material": "^7.1.1",
+    "@mui/x-tree-view": "^8.5.1",
+    "github-markdown-css": "^5.8.1",
+    "jszip": "^3.10.1",
+    "leo-profanity": "^1.7.0",
+    "material-react-table": "^3.2.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-icons": "^5.5.0",
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^15.6.1",
+    "remark-gfm": "^4.0.1",
+    "styled-components": "^6.1.18",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.5.0",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.6",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "@types/styled-components": "^5.1.34",
+    "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.33.1",
+    "@typescript-eslint/parser": "^8.33.1",
+    "@vitejs/plugin-react": "^4.5.1",
+    "@vitest/ui": "^3.2.2",
+    "depcheck": "^1.4.7",
+    "eslint": "^9.28.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-prettier": "^5.4.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "prettier": "^3.5.3",
+    "ts-prune": "^0.10.3",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.2"
+  },
+  "overrides": {
+    "prismjs": "^1.29.0",
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "d3-color": "^3.1.0",
+      "prismjs": "^1.30.0"
+    }
+  },
+  "packageManager": "pnpm@9.3.0"
+}
