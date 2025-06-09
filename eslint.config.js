@@ -17,6 +17,7 @@ export default [
       "**/.ignored_node_modules/**",
       "**/dist/**",
       "**/build/**",
+      "vitest.config.ts",
     ],
   },
 
