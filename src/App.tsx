@@ -31,6 +31,7 @@
  * ------------------------------------------------------------------ */
 
 import Workbench from "./Workbench";
+import type React from "react";
 
 /**
  * The root component injected by ReactDOM.<br>
@@ -38,6 +39,6 @@ import Workbench from "./Workbench";
  * global providers (routing, analytics, error boundaries, etc.)
  * later without touching the business logic in <Workbench/>.
  */
-export default function App(): JSX.Element {
+export default function App(): React.JSX.Element {
   return <Workbench />;
 }

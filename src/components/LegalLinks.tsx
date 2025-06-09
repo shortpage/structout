@@ -6,6 +6,7 @@
  * ------------------------------------------------------------------ */
 
 import { useState } from "react";
+import type React from "react";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import ReactMarkdown from "react-markdown";
@@ -22,7 +23,7 @@ const DOC_FILE: Record<DocKey, string> = {
   terms: "TERMS_OF_USE.md",
 };
 
-export default function LegalLinks(): JSX.Element {
+export default function LegalLinks(): React.JSX.Element {
   const [markdown, setMarkdown] = useState<string | null>(null);
 
   /** fetch + open the selected document */

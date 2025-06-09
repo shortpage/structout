@@ -38,6 +38,7 @@ import {
   FaList,
   FaCubes,
 } from "react-icons/fa";
+import type React from "react";
 
 /* ------------------------------------------------------------------ */
 /* Visual constants                                                   */
@@ -64,7 +65,7 @@ export const selectOptions = TYPE_OPTIONS;
 /* ------------------------------------------------------------------ */
 /* Icon mapping for quick inline rendering                            */
 /* ------------------------------------------------------------------ */
-const TYPE_ICON: Record<string, JSX.Element> = {
+const TYPE_ICON: Record<string, React.JSX.Element> = {
   string: <FaFont style={{ fontSize: ICON_SIZE }} />,
   number: <FaHashtag style={{ fontSize: ICON_SIZE }} />,
   integer: <FaHashtag style={{ fontSize: ICON_SIZE }} />,
@@ -74,7 +75,7 @@ const TYPE_ICON: Record<string, JSX.Element> = {
 };
 
 /* Extended map covering array-* composite types */
-export const typeToIcon: Record<string, JSX.Element> = {
+export const typeToIcon: Record<string, React.JSX.Element> = {
   ...TYPE_ICON,
   "array-string": <FaList style={{ fontSize: ICON_SIZE }} />,
   "array-number": <FaList style={{ fontSize: ICON_SIZE }} />,
