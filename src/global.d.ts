@@ -21,9 +21,9 @@
  * ------------------------------------------------------------------
  * File   : global.d.ts
  * Author : Sesh Ragavachari
- * Date   : 2025-04-30
+ * Date   : 2025-06-09
  * Version: 1.0
- * ------------------------------------------------------------------
+ *
  * Purpose
  *  Application-wide TypeScript augmentations and module shims for
  *  libraries that ship without their own type declarations.

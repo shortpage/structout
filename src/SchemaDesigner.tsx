@@ -2,17 +2,50 @@
  * MIT License
  * Copyright (c) 2025  Sesh Ragavachari
  *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the “Software”), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify,
+ * merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished
+ * to do so, subject to the following conditions:
+ *
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ * ------------------------------------------------------------------
+ *
  * File   : SchemaDesigner.tsx
  * Author : Sesh Ragavachari
- * Date   : 2025-06-07  (example references removed)
- * Version: 1.1.1
- * ------------------------------------------------------------------
+ * Date   : 2025-06-09
+ * Version: 1.0
+ *
  * Interactive middle pane of the StructOut workbench. Users edit
  * a nested field structure, set metadata, and save / delete schemas
  * stored in browser LocalStorage. A live JSON-Schema string is
  * regenerated on every change and sent upward via
  * onJsonSchemaGenerated().
- * ------------------------------------------------------------------ */
+ *
+ *   Central authoring surface for field definitions. Converts the
+ *  user's table edits into a valid draft‑07 JSON Schema and streams
+ *  the string upward via `onJsonSchemaGenerated()`.
+ *
+ *  Data model
+ *    • `fields`        – Flat array of `SchemaField` objects.
+ *      A flat list avoids deep tree diffing; nesting is derived
+ *      from the `parentId` property when needed.
+ *    • `historyRef`    – Simple bounded stack to support undo/redo.
+ *
+ *  Persistence
+ *    • Drafts are written to LocalStorage under
+ *      `structout:schema:{providerId}:{schemaName}`.
+ *    • A `storage` event is fired so other tabs update reactively.
+ * -------------------------------------------------------------- */
 
 import React, {
   forwardRef,

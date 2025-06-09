@@ -21,17 +21,14 @@
  * ------------------------------------------------------------------
  * File   : AppLayout.ts
  * Author : Sesh Ragavachari
- * Date   : 2025-04-30
+ * Date   : 2025-06-09
  * Version: 1.0
- * ------------------------------------------------------------------
- * Purpose
+ *
  *  Top-level 3-column flex layout:
  *     • Explorer      (tree view)
  *     • Designer      (field editor)
  *     • Generated-Schema (JSON preview)
  *
- *  Percentages below **must add up to 100**.  They can be tweaked in
- *  one place without touching downstream components.
  * ------------------------------------------------------------------ */
 
 import styled from "styled-components";

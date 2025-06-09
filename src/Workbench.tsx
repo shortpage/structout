@@ -1,11 +1,49 @@
 /* ------------------------------------------------------------------
- * MIT License © 2025 Sesh Ragavachari
+ * MIT License
+ * Copyright (c) 2025  Sesh Ragavachari
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the “Software”), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify,
+ * merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished
+ * to do so, subject to the following conditions:
+ *
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
  * ------------------------------------------------------------------
+ *
  * File   : Workbench.tsx
  * Author : Sesh Ragavachari
- * Date   : 2025-06-04
- * Version: 1.7.3 (example references pruned)
- * ------------------------------------------------------------------ */
+ * Date   : 2025-06-09
+ * Version: 1.0
+ *
+ *   Layout
+ *    ▸ Explorer column          (labels/examples)
+ *    ▸ Designer column          (fields table & form)
+ *    ▸ Schema column            (generated JSON + client snippet)
+ *
+ *   State lifetimes
+ *    • providerId      – selected LLM provider (OpenAI, etc.)
+ *    • headerRule      – provider‑specific header block
+ *    • jsonSchema      – draft schema emitted by <SchemaDesigner/>
+ *    • schemaId        – currently loaded LocalStorage key
+ *
+ *   Data flow
+ *    User edits ► <SchemaDesigner/> updates ► jsonSchema ►
+ *    <GeneratedSchemaPanel/> which formats, previews, bundles, copies.
+ *
+ *  All heavy logic (history, validation, bundle building) lives in
+ *  children; this component stitches them together and handles
+ *  theming + snackbars.
+ * -------------------------------------------------------------- */
 
 import React, { useRef, useState, useEffect } from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";

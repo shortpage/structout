@@ -1,9 +1,64 @@
-# Tauri + React + Typescript
+# Structout
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
 
-## Recommended IDE Setup
+> **Visual JSON‑schema workbench** – build a schema, preview valid output, and
+> export a ready‑to‑run Pydantic + LLM demo bundle in one click.
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+## 1 Clone & bootstrap
 
-CI test
+```
+git clone https://github.com/seshragav/structout.git
+cd structout
+pnpm install      # or npm i / yarn
+pnpm dev          # http://localhost:5173
+```
+
+**Prereqs**
+
+* Node ≥ 18 + pnpm
+* Rust stable + Cargo (only for Tauri)
+* macOS/Linux: Xcode CLT / build‑essential  
+  Windows: VS Build Tools + WebView2 runtime
+
+---
+
+## 2 Desktop build (Tauri)
+
+```
+pnpm tauri dev    # hot‑reload desktop shell
+pnpm tauri build  # signed installers → src-tauri/target/release/bundle
+```
+
+### Prefer a pre‑built binary?
+
+[![Get Structout from the Microsoft Store](https://img.shields.io/static/v1?label=&message=Microsoft%20Store&color=blue&logo=windows)](https://apps.microsoft.com/detail/9NBLGGH6) <!-- replace with real Store ID -->
+
+---
+
+## 3 Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `pnpm dev` | Vite dev‑server |
+| `pnpm build` | Web production build |
+| `pnpm tauri dev` | Desktop shell (dev) |
+| `pnpm tauri build` | Desktop installers |
+| `pnpm lint` | ESLint + Prettier |
+| `pnpm test` | Vitest |
+| `pnpm format` | Prettier write |
+
+---
+
+## 4 Documentation
+
+Full guide on GitBook → **Structout Documentation**  
+https://your-gitbook-url.com/structout <!-- replace URL -->
+
+---
+
+## 5 Contributing
+
+Fork → branch → `pnpm lint && pnpm test` → PR.  
+CI must pass.
+
+© 2025 Sesh Ragavachari — MIT License

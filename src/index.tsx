@@ -21,9 +21,9 @@
  * ------------------------------------------------------------------
  * File   : index.tsx
  * Author : Sesh Ragavachari
- * Date   : 2025-04-30
+ * Date   : 2025-06-09
  * Version: 1.0
- * ------------------------------------------------------------------
+ *
  * Purpose
  *  Bootstraps the React application by mounting <App/> into the
  *  #root element supplied by Vite’s default HTML template.

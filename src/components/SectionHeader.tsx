@@ -23,8 +23,7 @@
  * Author : Sesh Ragavachari
  * Date   : 2025-04-30
  * Version: 1.0
- * ------------------------------------------------------------------
- * Purpose
+
  *  Re-usable slate-grey column header bar.  Always stretches to the
  *  full width of its parent flex column and optionally renders a
  *  right-hand element (icon, button, select, etc.).

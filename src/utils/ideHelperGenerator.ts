@@ -1,10 +1,44 @@
 /* ------------------------------------------------------------------
  * MIT License
  * Copyright (c) 2025  Sesh Ragavachari
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the “Software”), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify,
+ * merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished
+ * to do so, subject to the following conditions:
+ *
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
  * ------------------------------------------------------------------
  * File   : ideHelperGenerator.ts
- * Version: 1.7  (no-explicit-any compliant)
- * ------------------------------------------------------------------ */
+ * Author : Sesh Ragavachari
+ * Date   : 2025-06-09
+ * Version: 1.0
+ *
+ *  Generate two helper files for the user bundle:
+ *    1️⃣ <id>_model.py – Pydantic model matching the JSON Schema.
+ *    2️⃣ <id>_main.py  – Self‑contained demo that calls the model
+ *       provider, validates the response, and saves artefacts.
+
+ *  Keep *all* provider quirks behind a small `ADAPTERS` table so the
+ *  core logic (schema → Pydantic → Python snippet) is identical for
+ *  every vendor.  The adapters only need two lambdas: `getName` and
+ *  `getSchema`.
+ *
+ *  • Consumers: download button in <GeneratedSchemaPanel/>.
+ *  • To add a new provider, drop two lambdas into `ADAPTERS`.
+ *  • If Pydantic evolves (v3+), update `buildModel()` and error
+ *    handling in providerSnippets.ts – the helpers will auto‑adapt.
+ * -------------------------------------------------------------- */
 
 import { buildMainTemplate } from "./providerSnippets";
 

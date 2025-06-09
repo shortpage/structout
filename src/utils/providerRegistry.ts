@@ -1,7 +1,46 @@
 /* ------------------------------------------------------------------
- * MIT License © 2025 Sesh Ragavachari
+ * MIT License
+ * Copyright (c) 2025  Sesh Ragavachari
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the “Software”), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify,
+ * merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished
+ * to do so, subject to the following conditions:
+ *
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ * ------------------------------------------------------------------
  * File   : providerRegistry.ts
- * Version: 1.7.3 (syntax-fix, zero explicit-any)
+ * Author : Sesh Ragavachari
+ * Date   : 2025-06-09
+ * Version: 1.0
+ *
+ *  Central registry that wraps the quirks of each LLM vendor SDK
+ *  (OpenAI, Anthropic, Gemini, etc.) behind a *single* typed
+ *  contract – so the rest of the codebase can stay vendor‑agnostic.
+ *  Expose a `PROVIDER_META` object where every key is a short id
+ *  (`openai`, `anthropic`, …) and every value satisfies the
+ *  `ProviderMeta` interface.  Doing so gives us full IntelliSense,
+ *  compile‑time guarantees, and predictable field names.
+ *
+ *  • Consumers: <Workbench/> (provider picker),
+ *               jsonSchemaGenerator.ts (header rule),
+ *               providerSnippets.ts (client code).
+ *  • To add another provider:
+ *      1. Drop its JSON manifest in `/src/api/<id>.json`.
+ *      2. Append a new entry to `PROVIDER_META` (keep list sorted!)
+ *         filling in `sdkImport`, `models`, `renderCall`, etc.
+ *      3. Ensure `renderCall()` returns a *single* Python snippet
+ *         that sets `payload` to JSON matching the schema.
  * ------------------------------------------------------------------ */
 
 export type ModelKey = string;

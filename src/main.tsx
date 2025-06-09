@@ -21,9 +21,9 @@
  * ------------------------------------------------------------------
  * File   : main.tsx
  * Author : Sesh Ragavachari
- * Date   : 2025-04-30
+ * Date   : 2025-06-09
  * Version: 1.0
- * ------------------------------------------------------------------
+ *
  * Purpose
  *  Vite entry point.  Adds React.StrictMode around <App/> to surface
  *  potential side-effect bugs in development builds.

@@ -1,7 +1,38 @@
-/* ------------------------------------------------------------------ *
- * MIT License © 2025 Sesh Ragavachari
- * File   : LabelSidebar.tsx  – v2.0 (examples support)
- * ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+ * MIT License
+ * Copyright (c) 2025  Sesh Ragavachari
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the “Software”), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify,
+ * merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished
+ * to do so, subject to the following conditions:
+ *
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ * ------------------------------------------------------------------
+ * File   : LabelSidebar.module.css
+ * Author : Sesh Ragavachari
+ * Date   : 2025-06-09
+ * Version: 1.0
+ *  Collapsible tree of labels/examples shown in the left‑hand
+ *  Explorer column.  Users can drag labels onto the designer or
+ *  click to auto‑insert.
+ *
+ *  Implementation notes
+ *    • Built on MUI‑X TreeView — avoids heavy virtual DOM libs.
+ *    • `EXAMPLE_ENABLED` toggle gates the display of saved drafts.
+ *    • Styling lives in `LabelSidebarLayout.tsx` and the co‑located
+ *      CSS module for minimal runtime logic here.
+ * -------------------------------------------------------------- */
 
 import React, {
   useEffect,

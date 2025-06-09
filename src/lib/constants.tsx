@@ -23,8 +23,7 @@
  * Author : Sesh Ragavachari
  * Date   : 2025-04-30
  * Version: 1.0
- * ------------------------------------------------------------------
- * Purpose
+ *
  *  Central repository for visual constants and shared dropdown data.
  *  – JSON-type <Select> options
  *  – React-icon mapping for each JSON type

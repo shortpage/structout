@@ -21,10 +21,9 @@
  * ------------------------------------------------------------------
  * File   : FieldEditor.module.css
  * Author : Sesh Ragavachari
- * Date   : 2025-04-30
+ * Date   : 2025-06-09
  * Version: 1.0
- * ------------------------------------------------------------------
- * Purpose
+ *
  *  Pure presentation styles consumed by <FieldEditor>.  All colours
  *  and typography are handled in JSX via MUI; these classes focus on
  *  spatial layout only.

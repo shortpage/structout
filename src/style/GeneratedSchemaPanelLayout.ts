@@ -21,11 +21,10 @@
  * ------------------------------------------------------------------
  * File   : GeneratedSchemaPanelLayout.ts
  * Author : Sesh Ragavachari
- * Date   : 2025-04-30
+ * Date   : 2025-06-09
  * Version: 1.0
- * ------------------------------------------------------------------
- * Purpose
- *  Styled-components layout helpers for <GeneratedSchemaPanel>.  The
+ *
+ * Styled-components layout helpers for <GeneratedSchemaPanel>.  The
  *  right-hand column already has a 1-px border supplied by AppLayout,
  *  so no additional borders are applied here to avoid a double edge.
  * ------------------------------------------------------------------ */

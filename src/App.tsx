@@ -21,14 +21,22 @@
  * ------------------------------------------------------------------
  * File   : App.tsx
  * Author : Sesh Ragavachari
- * Date   : 2025-04-30
+ * Date   : 2025-06-09
  * Version: 1.0
- * ------------------------------------------------------------------
- * Description
+ *
  *  Top-level React component.  Acts as the single entry-point for the
  *  StructOut Designer application by rendering the <Workbench/>,
  *  which hosts Explorer, Designer, and Generated-Schema panels.
  * ------------------------------------------------------------------ */
+/* --------------------------------------------------------------
+ *  <App/> – Application root
+ *
+ *  ⌁ Responsibilities
+ *    • Mount the <Workbench/> container.
+ *    • Remain intentionally *stateless* and *presentation‑free*.
+ *      Any global providers (router, telemetry, error boundaries)
+ *      should be wired here to avoid polluting business logic.
+ * -------------------------------------------------------------- */
 
 import Workbench from "./Workbench";
 import type React from "react";
