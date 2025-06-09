@@ -81,4 +81,4 @@ export const typeToIcon: Record<string, React.JSX.Element> = {
   "array-object": <FaList style={{ fontSize: ICON_SIZE }} />,
 };
 
-export const EXAMPLE_ENABLED = false;
+export const EXAMPLE_ENABLED = true;
