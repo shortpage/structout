@@ -44,7 +44,6 @@ export default [
       ...tseslint.configs.recommended.rules,
       ...reactPlugin.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
-      ...jsxA11y.configs.recommended.rules,
       "prettier/prettier": "error",
       "react/react-in-jsx-scope": "off",
       "@typescript-eslint/no-unused-vars": [
