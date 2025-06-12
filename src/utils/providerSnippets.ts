@@ -22,15 +22,15 @@
  * File   : providerSnippets.ts
  * Author : Sesh Ragavachari
  * Date   : 2025-06-09
- * Version: 1.0
+ * Version: 1.3  (+ run header; indent-safe; Pydantic-v1/2 pretty print)
  *
- *  Emit a **self‑contained Python demo** for the user‑generated
+ *  Emit a **self-contained Python demo** for the user-generated
  *  schema: reads the prompt & schema, calls the chosen provider SDK,
  *  validates the JSON response with Pydantic, prints pretty output
  *  and saves both raw & pretty artifacts to ../output/.
  *
  *  Compose the snippet in *one* place by stitching together small
- *  blocks (banner → I/O → provider call → validation → list‑sampler)
+ *  blocks (banner → I/O → provider call → validation → list-sampler)
  *  so downstream changes (e.g. new validation style) are done in a
  *  single function instead of scattered template files.
  *
@@ -44,7 +44,44 @@
 
 import { ProviderId, PROVIDER_META, ModelKey } from "./providerRegistry";
 import { ProviderMeta } from "./providerRegistry";
-/* ------------------------------------------------------------------ */
+
+/* ---------- helper: secure-key preamble ----------------------- */
+function renderSecureKeyBlock(apiKeyConst: string): string {
+  return `
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# Secure, cross-platform secret retrieval
+from secure_key import get_api_key
+api_key = get_api_key("${apiKeyConst}")
+# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+`;
+}
+
+/* ---------- helper: wrap provider call with timing & tokens --- */
+function wrapWithStats(block: string): string {
+  return `
+# -------- timed provider call -----------------------------------
+t0 = datetime.now()
+${block.trim()}
+elapsed_ms = (datetime.now() - t0).total_seconds() * 1000
+
+# ----- best-effort token-usage extraction -----------------------
+input_tokens  = None
+output_tokens = None
+for _var in ("completion", "response", "msg"):
+    if _var in locals():
+        _obj  = locals()[_var]
+        usage = getattr(_obj, "usage", None)
+        if usage:
+            input_tokens  = getattr(usage, "prompt_tokens",
+                           getattr(usage, "input_tokens",  None))
+            output_tokens = getattr(usage, "completion_tokens",
+                           getattr(usage, "output_tokens", None))
+        break
+`.trimStart();
+}
+
+/* ---------------------------------------------------------------- */
 export function buildMainTemplate(
   provider: ProviderId,
   id: string,
@@ -53,23 +90,18 @@ export function buildMainTemplate(
   layout: string,
   modelKey?: ModelKey,
 ): string {
-  /* ---------- look-ups ------------------------------------------ */
-  const meta = PROVIDER_META[provider] as ProviderMeta;
+  /* ---------- look-ups --------------------------------------- */
+  const meta       = PROVIDER_META[provider] as ProviderMeta;
+  const keySafe    = (modelKey ?? meta.defaultModel) as keyof typeof meta.models;
+  const modelId    = meta.models[keySafe];
+  const needsTool  = meta.needsToolName === true;
+  const clientCtor = `${meta.clientCtor}(api_key=api_key${meta.clientExtra ?? ""})`;
 
-  const clientCtor = meta.clientCtor; // ← restore this
-  const modelDict = meta.models;
-  const keySafe: keyof typeof modelDict = (modelKey ??
-    meta.defaultModel) as keyof typeof modelDict;
-
-  const modelId = modelDict[keySafe];
-  const clientExtra = meta.clientExtra ?? "";
-  const needsTool = meta.needsToolName === true;
-
-  /* ---------- filenames ----------------------------------------- */
+  /* ---------- filenames -------------------------------------- */
   const schemaFile = `${id}_schema.json`;
   const promptFile = `${id}_content.txt`;
 
-  /* ---------- banner + imports ---------------------------------- */
+  /* ---------- banner + imports ------------------------------- */
   const banner = `
 """Tiny self-contained demo (${provider.toUpperCase()} SDK)
 
@@ -82,26 +114,26 @@ export function buildMainTemplate(
 —— MODEL LAYOUT —————————————————————————
 ${layout.trim()}
 ————————————————————————————————————————"""
-import os, json, logging, sys
+import os, json, sys
 from datetime import datetime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 ${meta.sdkImport}
 from pydantic import BaseModel, ValidationError
-from pprint   import pprint
-from typing   import Any
+from typing    import Any
 from ${id}_model import ${modelCls}
+`;
 
-client = ${clientCtor}(api_key=os.getenv("${meta.apiKeyEnv}")${clientExtra})
-
-# -------- output paths -------------------------------------------
+  /* ---------- output-path block ------------------------------ */
+  const outPaths = `
+# -------- output paths -----------------------------------------
 out_dir  = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "output"))
 os.makedirs(out_dir, exist_ok=True)
-_base    = os.path.basename(__file__)[:-8]           # strip "_main.py"
+_base    = os.path.basename(__file__)[:-8]   # strip "_main.py"
 out_json = os.path.join(out_dir, _base + ".json")
 out_txt  = os.path.join(out_dir,  _base + ".out")
 `;
 
-  /* ---------- read prompt + schema ------------------------------ */
+  /* ---------- read prompt + schema --------------------------- */
   const io = `
 with open("./${schemaFile}", encoding="utf-8") as f:
     schema = json.load(f)
@@ -110,76 +142,60 @@ with open("../input/${promptFile}", encoding="utf-8") as f:
     content = f.read()
 `;
 
-  /* ---------- provider request ---------------------------------- */
-  const apiCall = meta.renderCall({
-    modelId,
-    schemaVar: "schema",
-    contentVar: "content",
-    toolNameVar: needsTool ? JSON.stringify(id) : undefined,
-  });
+  /* ---------- provider call ---------------------------------- */
+  const rawCall = meta
+    .renderCall({
+      modelId,
+      schemaVar: "schema",
+      contentVar: "content",
+      toolNameVar: needsTool ? JSON.stringify(id) : undefined,
+    })
+    .replace(/client\\s*=.*\\n/, `client = ${clientCtor}\n`);
 
-  /* ---------- validation block ---------------------------------- */
+  const apiCall = wrapWithStats(rawCall);
+
+  /* ---------- validation + run-header ------------------------ */
   const validate = `
-# -------- strict validation with graceful error report ------------
+# -------- strict validation with graceful error report ---------
 try:
     result: ${modelCls} = ${modelCls}.model_validate(payload)
 except ValidationError as err:
-    # ❶ save raw payload
     with open(out_json, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2, ensure_ascii=False)
-
-    # ❷ build and save validation report
-    missing, type_errors, other_errors = [], [], []
-    for e in err.errors():
-        path = ".".join(str(p) for p in e["loc"])
-        t    = e.get("type", "")
-        if t == "missing":
-            missing.append(path)
-        elif t.startswith("type"):
-            type_errors.append((path, e["msg"]))
-        else:
-            other_errors.append((path, e["msg"]))
-
     with open(out_txt, "w", encoding="utf-8") as f:
-        f.write(datetime.now().isoformat() + "\\n\\nRAW PAYLOAD:\\n")
-        json.dump(payload, f, indent=2, ensure_ascii=False)
-        f.write("\\n\\nVALIDATION SUMMARY:\\n")
-        if missing:
-            f.write("\\n— Missing required keys:\\n")
-            for p in missing: f.write("   • " + p + "\\n")
-        if type_errors:
-            f.write("\\n— Type mismatches:\\n")
-            for p, msg in type_errors: f.write(f"   • {p}: {msg}\\n")
-        if other_errors:
-            f.write("\\n— Other issues:\\n")
-            for p, msg in other_errors: f.write(f"   • {p}: {msg}\\n")
-
-    # ❸ console output
-    print("\\n❌ Raw JSON from model\\n",
-          json.dumps(payload, indent=2, ensure_ascii=False))
-    print("\\n*** Validation problems detected ***")
-    for line in open(out_txt, encoding="utf-8").read().splitlines()[3:]:
-        print(line)
+        json.dump({"errors": err.errors(), "payload": payload},
+                  f, indent=2, ensure_ascii=False)
+    print("\\n❌ Validation failed – see output folder.")
     raise SystemExit(0)
 
-# -------- pretty-print validated result + save -------------------
-pretty = ""
-try:
-    pretty = result.model_dump_json(indent=2, ensure_ascii=False)
-except TypeError:  # Pydantic v1 fallback
-    pretty = json.dumps(result.model_dump(), indent=2, ensure_ascii=False)
+# -------- run header -------------------------------------------
+generated_at = datetime.now().isoformat(timespec="seconds")
+header = (
+    "\\n-----------------------------------------------\\n"
+    f" Provider     : ${provider}\\n"
+    f" Model        : ${modelId}\\n"
+    f" Generated at : {generated_at}\\n"
+    f" Input tokens : {input_tokens}\\n"
+    f" Output tokens: {output_tokens}\\n"
+    f" Exec-time ms : {int(elapsed_ms)}\\n"
+    "-----------------------------------------------\\n"
+)
+print(header)
 
-print("\\n✅ Pretty JSON\\n", pretty)
+# -------- pretty-print validated result + save -----------------
+pretty = json.dumps(result.model_dump(), indent=2, ensure_ascii=False)
+print("✅ Pretty JSON\\n", pretty)
 
 with open(out_json, "w", encoding="utf-8") as f:
     f.write(pretty)
 
 with open(out_txt, "w", encoding="utf-8") as f:
-    f.write(datetime.now().isoformat() + "\\n\\n")
+    f.write(generated_at + "\\n")
+    f.write(header + "\\n")
     f.write(pretty)
 `;
 
-  /* ---------- optional list-sampler ----------------------------- */
+  /* ---------- optional list-sampler -------------------------- */
   const sampler = hasArray
     ? `
 def _dump_first(obj: BaseModel, path: str = "") -> None:
@@ -197,6 +213,15 @@ _dump_first(result)
 `
     : "";
 
-  /* ---------- stitch & return ----------------------------------- */
-  return banner + io + apiCall + validate + sampler;
+  /* ---------- stitch & return ------------------------------- */
+  return (
+    banner +
+    renderSecureKeyBlock(meta.apiKeyEnv) +
+    `client = ${clientCtor}\n` +
+    outPaths +
+    io +
+    apiCall +
+    validate +
+    sampler
+  );
 }

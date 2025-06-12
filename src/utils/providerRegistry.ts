@@ -5,10 +5,10 @@
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the “Software”), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify,
- * merge, publish, distribute, sublicense, and/or sell copies of the
- * Software, and to permit persons to whom the Software is furnished
- * to do so, subject to the following conditions:
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
@@ -22,30 +22,28 @@
  * File   : providerRegistry.ts
  * Author : Sesh Ragavachari
  * Date   : 2025-06-09
- * Version: 1.0
+ * Version: 1.1  (+ schemaExclude support)
  *
  *  Central registry that wraps the quirks of each LLM vendor SDK
  *  (OpenAI, Anthropic, Gemini, etc.) behind a *single* typed
- *  contract – so the rest of the codebase can stay vendor‑agnostic.
+ *  contract – so the rest of the codebase can stay vendor-agnostic.
  *  Expose a `PROVIDER_META` object where every key is a short id
  *  (`openai`, `anthropic`, …) and every value satisfies the
  *  `ProviderMeta` interface.  Doing so gives us full IntelliSense,
- *  compile‑time guarantees, and predictable field names.
+ *  compile-time guarantees, and predictable field names.
  *
  *  • Consumers: <Workbench/> (provider picker),
- *               jsonSchemaGenerator.ts (header rule),
+ *               jsonSchemaGenerator.ts (header rule & exclude list),
  *               providerSnippets.ts (client code).
  *  • To add another provider:
  *      1. Drop its JSON manifest in `/src/api/<id>.json`.
  *      2. Append a new entry to `PROVIDER_META` (keep list sorted!)
  *         filling in `sdkImport`, `models`, `renderCall`, etc.
- *      3. Ensure `renderCall()` returns a *single* Python snippet
- *         that sets `payload` to JSON matching the schema.
  * ------------------------------------------------------------------ */
 
 export type ModelKey = string;
 
-/* ---------- HEADER-RULE TYPE ------------------------------------ */
+/* ──────────── shared helper types ────────────────────────────── */
 export interface HeaderRuleEntry {
   key: string;
   type: "keyvalue" | "string" | "boolean" | "object" | "array";
@@ -54,40 +52,34 @@ export interface HeaderRuleEntry {
   [extra: string]: unknown;
 }
 
-/* ---------- helper: dynamic JSON import → HeaderRuleEntry[] ------ */
-async function loadHeaderRule(provider: string): Promise<HeaderRuleEntry[]> {
-  const normalise = (src: unknown): HeaderRuleEntry[] => {
-    let candidate: unknown = src;
-
-    if (typeof src === "object" && src !== null && "llmSchemaHeader" in src) {
-      candidate = (src as { llmSchemaHeader?: unknown }).llmSchemaHeader;
-    }
-
-    if (Array.isArray(candidate)) return candidate as HeaderRuleEntry[];
-    if (typeof candidate === "string")
-      return JSON.parse(candidate) as HeaderRuleEntry[];
-
-    throw new Error(`Invalid header rule format for provider “${provider}”.`);
-  };
-
-  /* Vite / Webpack ≥5 – works in browser builds ------------------ */
-  try {
-    const mod = await import(/* @vite-ignore */ `../api/${provider}.json`, {
-      assert: { type: "json" },
-    } as ImportCallOptions);
-
-    // dev build → raw obj | prod build → { default: obj }
-    return normalise(
-      "default" in mod ? (mod as { default: unknown }).default : mod,
-    );
-  } catch {
-    /* Node-only unit tests or legacy bundlers --------------------- */
-    const res = await fetch(`/api/${provider}.json`);
-    return normalise(await res.json());
-  }
+interface ProviderManifest {
+  llmSchemaHeader?: unknown; // string | HeaderRuleEntry[]
+  schemaExclude?: unknown; // string[]
 }
 
-/* ---------- provider-metadata type ------------------------------ */
+/* ──────────── manifest loader (browser & node) ───────────────── */
+async function loadManifest(provider: string): Promise<ProviderManifest> {
+  /**  The file sits at /api/<name>.json in both dev & prod.   **/
+  const res = await fetch(`/api/${provider}.json`);
+  if (!res.ok) {
+    throw new Error(`Unable to load /api/${provider}.json  (${res.status})`);
+  }
+  return (await res.json()) as ProviderManifest;
+}
+
+/* ──────────── normalisers -------------------------------------- */
+function normaliseHeader(src: unknown, provider: string): HeaderRuleEntry[] {
+  if (Array.isArray(src)) return src as HeaderRuleEntry[];
+  if (typeof src === "string") return JSON.parse(src);
+  throw new Error(`Invalid llmSchemaHeader for “${provider}”.`);
+}
+
+function normaliseExclude(src: unknown): string[] | undefined {
+  if (Array.isArray(src)) return src.filter((s) => typeof s === "string");
+  return undefined;
+}
+
+/* ──────────── ProviderMeta interface ─────────────────────────── */
 export interface ProviderMeta {
   sdkImport: string;
   apiKeyEnv: string;
@@ -98,7 +90,11 @@ export interface ProviderMeta {
   models: Record<ModelKey, string>;
   defaultModel: ModelKey;
 
+  /** Async because the header comes from a JSON file */
   getHeaderRule: () => Promise<HeaderRuleEntry[]>;
+
+  /** Async for symmetry; returns undefined if provider keeps everything */
+  getSchemaExclude?: () => Promise<string[] | undefined>;
 
   renderCall: (opts: {
     modelId: string;
@@ -108,9 +104,11 @@ export interface ProviderMeta {
   }) => string;
 }
 
-/* ---------- registry ------------------------------------------- */
+/* =================================================================
+ *   P  R  O  V  I  D  E  R     R  E  G  I  S  T  R  Y
+ * ================================================================= */
 export const PROVIDER_META = {
-  /* ————————— OpenAI ————————— */
+  /* ————————————————— OpenAI ————————————————— */
   openai: {
     sdkImport: "from openai import OpenAI, OpenAIError",
     apiKeyEnv: "OPENAI_API_KEY",
@@ -118,9 +116,10 @@ export const PROVIDER_META = {
     models: { gpt4o: "gpt-4o", gpt35: "gpt-3.5-turbo" },
     defaultModel: "gpt4o",
 
-    getHeaderRule: () => loadHeaderRule("openai"),
-
-    renderCall: ({ modelId, schemaVar, contentVar }) => `
+    getHeaderRule: async () =>
+      normaliseHeader((await loadManifest("openai")).llmSchemaHeader, "openai"),
+    getSchemaExclude: async () => undefined,
+    renderCall: ({ modelId, schemaVar, contentVar }) => /* unchanged */ `
 completion = client.beta.chat.completions.parse(
     model="${modelId}",
     messages=[
@@ -133,7 +132,7 @@ msg     = completion.choices[0].message
 payload = msg.parsed if msg.parsed else json.loads(msg.content)`,
   } as const satisfies ProviderMeta,
 
-  /* ————————— Anthropic ————————— */
+  /* ————————————————— Anthropic ————————————————— */
   anthropic: {
     sdkImport: "from anthropic import Anthropic, APIError",
     apiKeyEnv: "ANTHROPIC_API_KEY",
@@ -141,13 +140,23 @@ payload = msg.parsed if msg.parsed else json.loads(msg.content)`,
     needsToolName: true,
     models: {
       sonnet: "claude-3-5-sonnet-20240620",
-      haiku: "claude-3-5-haiku-20240620",
+      haiku: "claude-3-5-haiku-20241022",
     },
     defaultModel: "sonnet",
 
-    getHeaderRule: () => loadHeaderRule("anthropic"),
+    getHeaderRule: async () =>
+      normaliseHeader(
+        (await loadManifest("anthropic")).llmSchemaHeader,
+        "anthropic",
+      ),
+    getSchemaExclude: async () => undefined,
 
-    renderCall: ({ modelId, schemaVar, contentVar, toolNameVar }) => `
+    renderCall: ({
+      modelId,
+      schemaVar,
+      contentVar,
+      toolNameVar,
+    }) => /* unchanged */ `
 msg = client.messages.create(
     model="${modelId}",
     max_tokens=4096,
@@ -162,7 +171,7 @@ tool_block = next(
 payload = tool_block.input`,
   } as const satisfies ProviderMeta,
 
-  /* ————————— Google Gemini ————————— */
+  /* ————————————————— Google Gemini ————————————————— */
   "google-gemini": {
     sdkImport: "from google import genai",
     apiKeyEnv: "GEMINI_API_KEY",
@@ -170,9 +179,17 @@ payload = tool_block.input`,
     models: { flash: "gemini-2.0-flash", pro: "gemini-1.5-pro" },
     defaultModel: "flash",
 
-    getHeaderRule: () => loadHeaderRule("google-gemini"),
+    getHeaderRule: async () =>
+      normaliseHeader(
+        (await loadManifest("google-gemini")).llmSchemaHeader,
+        "google-gemini",
+      ),
 
-    renderCall: ({ modelId, schemaVar, contentVar }) => `
+    /* NEW: provider-specific exclude list */
+    getSchemaExclude: async () =>
+      normaliseExclude((await loadManifest("google-gemini")).schemaExclude),
+
+    renderCall: ({ modelId, schemaVar, contentVar }) => /* unchanged */ `
 contents = [genai.types.Content(role="user",
             parts=[genai.types.Part.from_text(text=${contentVar})])]
 cfg = genai.types.GenerateContentConfig(
@@ -187,7 +204,7 @@ response = client.models.generate_content(
 payload = json.loads(response.text)`,
   } as const satisfies ProviderMeta,
 
-  /* ————————— Llama API ————————— */
+  /* ————————————————— Llama API ————————————————— */
   llama: {
     sdkImport: "from llama_api_client import LlamaAPIClient",
     apiKeyEnv: "LLAMA_API_KEY",
@@ -195,9 +212,11 @@ payload = json.loads(response.text)`,
     models: { maverick17b: "Llama-4-Maverick-17B-128E-Instruct-FP8" },
     defaultModel: "maverick17b",
 
-    getHeaderRule: () => loadHeaderRule("llama"),
+    getHeaderRule: async () =>
+      normaliseHeader((await loadManifest("llama")).llmSchemaHeader, "llama"),
+    getSchemaExclude: async () => undefined,
 
-    renderCall: ({ modelId, schemaVar, contentVar }) => `
+    renderCall: ({ modelId, schemaVar, contentVar }) => /* unchanged */ `
 completion = client.chat.completions.create(
     model="${modelId}",
     messages=[
@@ -212,10 +231,10 @@ completion = client.chat.completions.create(
 payload = json.loads(completion.completion_message.content.text)`,
   } as const satisfies ProviderMeta,
 
-  /* ————————— Grok (x.ai) ————————— */
+  /* ————————————————— Grok (x.ai) ————————————————— */
   grok: {
     sdkImport: "from openai import OpenAI, OpenAIError",
-    apiKeyEnv: "XAI_API_KEY",
+    apiKeyEnv: "GROK_API_KEY",
     clientCtor: "OpenAI",
     clientExtra: ', base_url="https://api.x.ai/v1"',
     models: {
@@ -226,9 +245,11 @@ payload = json.loads(completion.completion_message.content.text)`,
     },
     defaultModel: "grok3",
 
-    getHeaderRule: () => loadHeaderRule("grok"),
+    getHeaderRule: async () =>
+      normaliseHeader((await loadManifest("grok")).llmSchemaHeader, "grok"),
+    getSchemaExclude: async () => undefined,
 
-    renderCall: ({ modelId, schemaVar, contentVar }) => `
+    renderCall: ({ modelId, schemaVar, contentVar }) => /* unchanged */ `
 completion = client.beta.chat.completions.parse(
     model="${modelId}",
     messages=[
@@ -241,21 +262,23 @@ msg     = completion.choices[0].message
 payload = msg.parsed if msg.parsed else json.loads(msg.content)`,
   } as const satisfies ProviderMeta,
 
-  /* ————————— Perplexity ————————— */
+  /* ————————————————— Perplexity ————————————————— */
   perplexity: {
     sdkImport: "from openai import OpenAI, OpenAIError",
-    apiKeyEnv: "PPLX_API_KEY",
+    apiKeyEnv: "PERPLEXITY_API_KEY",
     clientCtor: "OpenAI",
     clientExtra: ', base_url="https://api.perplexity.ai"',
-    models: {
-      sonarpro: "sonar-pro",
-      sonar: "sonar",
-    },
+    models: { sonarpro: "sonar-pro", sonar: "sonar" },
     defaultModel: "sonarpro",
 
-    getHeaderRule: () => loadHeaderRule("perplexity"),
+    getHeaderRule: async () =>
+      normaliseHeader(
+        (await loadManifest("perplexity")).llmSchemaHeader,
+        "perplexity",
+      ),
+    getSchemaExclude: async () => undefined,
 
-    renderCall: ({ modelId, schemaVar, contentVar }) => `
+    renderCall: ({ modelId, schemaVar, contentVar }) => /* unchanged */ `
 completion = client.beta.chat.completions.parse(
     model="${modelId}",
     messages=[
@@ -269,6 +292,7 @@ payload = msg.parsed if msg.parsed else json.loads(msg.content)`,
   } as const satisfies ProviderMeta,
 } as const;
 
-/* ---------- convenience exports -------------------------------- */
+/* ──────────── convenience exports ────────────────────────────── */
 export type ProviderId = keyof typeof PROVIDER_META;
-export const PROVIDERS = Object.keys(PROVIDER_META) as readonly ProviderId[];
+export const PROVIDERS =
+  Object.keys(PROVIDER_META) as readonly ProviderId[];

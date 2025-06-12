@@ -1,0 +1,20 @@
+"""
+Central list of API-token key names **plus UI-friendly labels**.
+
+Format:
+    TOKEN_KEYS = [
+        ("ENV_VAR_NAME", "Label shown in the GUI"),
+        ...
+    ]
+If you prefer, you may still append a plain string; the GUI will
+auto-derive a label like “Openai Api Key”.
+"""
+
+TOKEN_KEYS: list[tuple[str, str] | str] = [
+    ("GEMINI_API_KEY",     "Google Gemini Key"),
+    ("ANTHROPIC_API_KEY",  "Anthropic Claude key"),
+    ("GROK_API_KEY",       "x.ai Grok Key"),
+    ("PERPLEXITY_API_KEY", "Perplexity Key"),
+    ("OPENAI_API_KEY",     "OpenAI Key"),
+    ("LLAMA_API_KEY",      "Llama Key"),
+]

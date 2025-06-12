@@ -40,22 +40,18 @@
  *    handling in providerSnippets.ts – the helpers will auto‑adapt.
  * -------------------------------------------------------------- */
 
+
 import { buildMainTemplate } from "./providerSnippets";
 
-/* ------------------------------------------------------------------ */
-/* Types                                                              */
-/* ------------------------------------------------------------------ */
-
-/** Pragmatic Draft-7 placeholder – tweak if you need deeper access */
+/* ──────────── Types ────────────────────────────────────────────── */
 type Draft7Schema = Record<string, unknown>;
 
-/** Minimal node shape we read while walking the schema */
 interface JsonSchemaNode {
   type?: string;
   description?: string;
   items?: JsonSchemaNode;
   properties?: Record<string, JsonSchemaNode>;
-  [k: string]: unknown; // allow vendor extensions
+  [k: string]: unknown;
 }
 
 export interface HelperFiles {
@@ -65,10 +61,11 @@ export interface HelperFiles {
   filenameMain: string;
 }
 
-/* ------------------------------------------------------------------ */
-/* Utility – unwrap OpenAI’s extra “type=json_schema” layer           */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+ *  Unwrap vendor-specific layers → return plain Draft-7 schema
+ * ------------------------------------------------------------------ */
 const stripJsonSchemaWrapper = (node: unknown): Draft7Schema | undefined => {
+  /* Case 1 – OpenAI/Grok style wrapper */
   if (
     typeof node === "object" &&
     node !== null &&
@@ -78,21 +75,35 @@ const stripJsonSchemaWrapper = (node: unknown): Draft7Schema | undefined => {
     return (node as { json_schema: { schema: Draft7Schema } }).json_schema
       .schema;
   }
-  // best effort: assume the passed node is already a Draft-7 schema
-  return node as Draft7Schema | undefined;
+
+  /* NEW fallback – many providers now put the schema directly under "schema" */
+  if (
+    typeof node === "object" &&
+    node !== null &&
+    (node as { schema?: Draft7Schema }).schema &&
+    (node as { schema: { type?: string } }).schema.type === "object"
+  ) {
+    return (node as { schema: Draft7Schema }).schema;
+  }
+
+  /* If the node itself already looks like a Draft-7 schema */
+  if ((node as { type?: string }).type === "object") {
+    return node as Draft7Schema;
+  }
+
+  return undefined;
 };
 
-/* ------------------------------------------------------------------ */
-/* Provider-specific adapters                                         */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+ * Provider-specific adapters (two tiny lambdas each)
+ * ------------------------------------------------------------------ */
 type Adapter = {
   getName(root: unknown): string | undefined;
   getSchema(root: unknown): Draft7Schema | undefined;
 };
 
-/* —— Add/adjust providers with only TWO lambdas each  -------------- */
 const ADAPTERS = {
-  /* ——— OpenAI ———————————————————————————————— */
+  /* ——— OpenAI ——————————————————————————————— */
   openai: {
     getName: (r: unknown) =>
       (r as { json_schema?: { name?: string } }).json_schema?.name,
@@ -102,16 +113,15 @@ const ADAPTERS = {
       ),
   },
 
-  /* ——— Anthropic ——————————————————————————— */
+  /* ——— Anthropic ———————————————————————————— */
   anthropic: {
     getName: (r: unknown) => (r as { name?: string }).name,
     getSchema: (r: unknown) =>
       (r as { input_schema?: Draft7Schema }).input_schema,
   },
 
-  /* ——— Google Gemini —————————————————————— */
+  /* ——— Google Gemini ——————————————————————— */
   "google-gemini": {
-    // designer saves **raw** schema, so the root *is* the schema
     getName: (r: unknown) =>
       (r as { title?: string; name?: string }).title ??
       (r as { name?: string }).name,
@@ -119,15 +129,16 @@ const ADAPTERS = {
       (r as { schema?: Draft7Schema }).schema ?? (r as Draft7Schema),
   },
 
-  /* ——— Llama API ——————————————————————————— */
+  /* ——— Llama API ———————————————————————————— */
   llama: {
     getName: (r: unknown) =>
+      (r as { name?: string }).name ??
       (r as { json_schema?: { name?: string } }).json_schema?.name,
-    getSchema: (r: unknown) =>
-      (r as { json_schema?: { schema?: Draft7Schema } }).json_schema?.schema,
+    // works for both wrapped *and* unwrapped payloads
+    getSchema: (r: unknown) => stripJsonSchemaWrapper(r),
   },
 
-  /* ——— Grok & Perplexity reuse OpenAI logic ——— */
+  /* ——— Grok & Perplexity reuse OpenAI wrapper logic ———————— */
   grok: {
     getName: (r: unknown) =>
       (r as { json_schema?: { name?: string } }).json_schema?.name,
@@ -145,7 +156,7 @@ const ADAPTERS = {
       ),
   },
 
-  /* ——— Fallback (best-effort) ———————————— */
+  /* ——— Fallback ———————————————————————————— */
   default: {
     getName: (r: unknown) =>
       (r as { name?: string }).name ??
@@ -153,31 +164,24 @@ const ADAPTERS = {
     getSchema: (r: unknown) =>
       stripJsonSchemaWrapper(
         (r as { schema?: unknown }).schema ??
-          (r as { json_schema?: { schema?: unknown } }).json_schema?.schema ??
-          (r as { input_schema?: unknown }).input_schema,
+        (r as { json_schema?: { schema?: unknown } }).json_schema?.schema ??
+        (r as { input_schema?: unknown }).input_schema,
       ),
   },
 } as const satisfies Record<string, Adapter>;
 
-/* ------------------------------------------------------------------ */
-/* Provider list & Utility types                                      */
-/* ------------------------------------------------------------------ */
 type ProviderId = Exclude<keyof typeof ADAPTERS, "default">;
 
-/* ------------------------------------------------------------------ */
-/* Tiny utils                                                         */
-/* ------------------------------------------------------------------ */
+/* ───────── tiny utils ─────────────────────────────────────────── */
 const IND = "    ";
-
 const safePy = (s: string) =>
   (/^[A-Za-z_]/.test(s) ? s : `_${s}`).replace(/[^0-9A-Za-z_]/g, "_");
-
 const toClass = (s: string) =>
   safePy(s).replace(/(?:^|_)(\w)/g, (_, c: string) => c.toUpperCase());
 
-/* ------------------------------------------------------------------ */
-/* Build Pydantic model + static tree layout comment                  */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+ * Draft-7 → Pydantic model (+ static layout comment)
+ * ------------------------------------------------------------------ */
 function buildModel(
   schema: JsonSchemaNode,
   rootId: string,
@@ -191,7 +195,6 @@ function buildModel(
   const layoutLines: string[] = [];
   let hasArray = false;
 
-  /* — simple helper: map JSON-Schema primitives → Python types —— */
   const pyType = (t?: string): string =>
     (
       ({
@@ -211,7 +214,6 @@ function buildModel(
     layoutLines.push(`${pref}- ${safePy(name)}: (${cls})`);
 
     Object.entries(props).forEach(([propName, def]) => {
-      /* — default: primitive mapping (falls back to str) — */
       let typ = pyType(def.type);
 
       if (def.type === "array") {
@@ -231,7 +233,7 @@ function buildModel(
 
       attr.push(
         `${IND}${safePy(propName)}: ${typ}` +
-          (def.description ? `  # ${def.description}` : ""),
+        (def.description ? `  # ${def.description}` : ""),
       );
     });
 
@@ -248,28 +250,26 @@ function buildModel(
   };
 }
 
-/* ------------------------------------------------------------------ */
-/* Public generator – returns both helper texts + filenames           */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+ * Public generator – produces <id>_model.py and <id>_main.py
+ * ------------------------------------------------------------------ */
 export function generateHelperFiles(
   schemaJson: string,
   provider: ProviderId = "openai",
   modelKey?: string,
   schemaId?: string,
 ): HelperFiles {
-  const parsed = JSON.parse(schemaJson);
-  const adapter = ADAPTERS[provider] ?? ADAPTERS.default;
+  const parsed   = JSON.parse(schemaJson);
+  const adapter  = ADAPTERS[provider] ?? ADAPTERS.default;
 
-  /* —— locate Draft-7 schema ------------------------------------ */
-  const schema = adapter.getSchema(parsed);
-  if (!schema) throw new Error(`Schema not found for provider “${provider}”`);
+  const schema   = adapter.getSchema(parsed);
+  if (!schema)
+    throw new Error(`Schema not found for provider “${provider}”`);
 
-  /* —— derive safe identifier ----------------------------------- */
-  const rawName = schemaId ?? adapter.getName(parsed) ?? "schema";
-  const id = safePy(rawName);
+  const rawName  = schemaId ?? adapter.getName(parsed) ?? "schema";
+  const id       = safePy(rawName);
   const modelCls = toClass(id);
 
-  /* —— generate helpers ----------------------------------------- */
   const { code: modelCode, hasArray, layout } = buildModel(schema, id);
 
   let mainCode = buildMainTemplate(

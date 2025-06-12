@@ -1,0 +1,209 @@
+#!/usr/bin/env python3
+"""
+Encrypted secret helper (single pass-phrase cached 15 min, policy enforced).
+
+Commands
+--------
+  • GUI setup        : python secure_key.py --gui
+  • Single init      : python secure_key.py --init GEMINI_API_KEY
+  • Batch init       : python secure_key.py --init-many
+  • Purge everything : python secure_key.py --purge-all
+
+In code
+-------
+    from secure_key import get_api_key
+    token = get_api_key("GEMINI_API_KEY")
+"""
+
+from __future__ import annotations
+
+import argparse
+import base64
+import getpass
+import json
+import os
+import re
+import sys
+import time
+from typing import Dict, Tuple
+
+import keyring
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
+
+# ───────────── config ─────────────
+_PASSPHRASE_TTL = 900.0          # 15 min
+_ALLOWED_SPECIAL = r"[$#@!%]"
+_PASS_REGEX = re.compile(rf"^(?=.*\d)(?=.*{_ALLOWED_SPECIAL}).{{8,}}$")
+
+_SHARED_CACHE_KEY = "_shared"
+_TOKEN_TTL = 900                 # 15-min cache window
+_TOKEN_SVC = "secure-pass-cache"  # key-ring folder for pass-phrase caches
+
+_PCACHE: Dict[Tuple[str, str], Tuple[float, str]] = {}
+
+try:
+    from constants import TOKEN_KEYS
+except ModuleNotFoundError:
+    TOKEN_KEYS: list[str] = []
+
+# ─────────── helpers ──────────────
+def _provider_service(key_name: str) -> str:
+    """Derive the credential namespace from the key name."""
+    return key_name.split("_")[0].lower()          # GEMINI_API_KEY → gemini
+
+def _kdf(password: str, salt: bytes) -> bytes:
+    return Scrypt(salt=salt, length=32, n=2 ** 15, r=8, p=1,
+                  backend=default_backend()).derive(password.encode())
+
+def _encrypt(plain: str, pw: str) -> str:
+    salt, nonce = os.urandom(16), os.urandom(12)
+    ct = AESGCM(_kdf(pw, salt)).encrypt(nonce, plain.encode(), None)
+    return json.dumps({
+        "alg":  "AESGCM+SCRYPT",
+        "salt":  base64.b64encode(salt ).decode(),
+        "nonce": base64.b64encode(nonce).decode(),
+        "ct":    base64.b64encode(ct   ).decode(),
+    })
+
+def _decrypt(blob: str, pw: str) -> str:
+    m = json.loads(blob)
+    aes = AESGCM(_kdf(pw, base64.b64decode(m["salt"])))
+    return aes.decrypt(base64.b64decode(m["nonce"]),
+                       base64.b64decode(m["ct"]), None).decode()
+
+def _prompt_pass(label: str) -> str:
+    while True:
+        pw = getpass.getpass(label).strip()
+        if _PASS_REGEX.fullmatch(pw):
+            return pw
+        print("❌  Pass-phrase ≥ 8 chars, inc. digit + $ # @ ! %")
+
+# ─── pass-phrase cache (key-ring) ───
+def _cache_passphrase(ns: str, pw: str) -> None:
+    stamp = str(int(time.time()) + _TOKEN_TTL)
+    keyring.set_password(_TOKEN_SVC, f"{ns}/{_SHARED_CACHE_KEY}",
+                         f"{stamp}:{pw}")
+
+def _get_cached_passphrase(ns: str) -> str | None:
+    blob = keyring.get_password(_TOKEN_SVC, f"{ns}/{_SHARED_CACHE_KEY}")
+    if not blob:
+        return None
+    try:
+        expiry, pw = blob.split(":", 1)
+        if time.time() < int(expiry):
+            return pw
+    except ValueError:
+        pass
+    try:
+        keyring.delete_password(_TOKEN_SVC, f"{ns}/{_SHARED_CACHE_KEY}")
+    except keyring.errors.PasswordDeleteError:
+        pass
+    return None
+
+# ───────── initialisers ───────────
+def _init_one(key_name: str) -> None:
+    ns = _provider_service(key_name)
+    secret = getpass.getpass(f"Enter value for {key_name}: ").strip()
+    if not secret:
+        print("Aborted – empty secret."); return
+    pw = _get_cached_passphrase(ns) or _prompt_pass("Create pass-phrase: ")
+    keyring.set_password(ns, key_name, _encrypt(secret, pw))
+    _cache_passphrase(ns, pw)
+    print(f"✓ stored {key_name} under [{ns}]")
+
+def _init_many() -> None:
+    if not TOKEN_KEYS:
+        print("TOKEN_KEYS empty."); return
+    secrets: dict[str, str] = {}
+    for key in TOKEN_KEYS:
+        val = getpass.getpass(f"Enter value for {key}: ").strip()
+        if val:
+            secrets[key] = val
+    if not secrets:
+        print("No secrets entered – aborted."); return
+    pw = _prompt_pass("Create ONE pass-phrase for ALL secrets: ")
+    for k, v in secrets.items():
+        ns = _provider_service(k)
+        keyring.set_password(ns, k, _encrypt(v, pw))
+        _cache_passphrase(ns, pw)
+        print(f"✓ {k} stored under [{ns}]")
+    print(f"\nDone – {len(secrets)} secrets secured.")
+
+# ───────── purge helper ───────────
+def _purge_all() -> None:
+    count = 0
+    for key in TOKEN_KEYS:
+        ns = _provider_service(key)
+        try:
+            keyring.delete_password(ns, key); count += 1
+        except keyring.errors.PasswordDeleteError:
+            pass
+        try:
+            keyring.delete_password(_TOKEN_SVC, f"{ns}/{_SHARED_CACHE_KEY}")
+        except keyring.errors.PasswordDeleteError:
+            pass
+    print(f"Purged {count} secrets and all pass-phrase caches.")
+
+# ───────── public accessor ────────
+def get_api_key(key_name: str) -> str:
+    ns = _provider_service(key_name)
+
+    # 1. env override
+    if val := os.getenv(key_name):
+        return val
+
+    # 2. fetch ciphertext
+    blob = keyring.get_password(ns, key_name)
+    if not blob:
+        raise RuntimeError(
+            f"{key_name} not found – run:\n"
+            f"  python secure_key.py --init {key_name}"
+        )
+
+    # 3. cached pass-phrase
+    pw = _get_cached_passphrase(ns)
+
+    while pw is None:
+        if not sys.stdin.isatty():
+            raise RuntimeError(
+                "Need pass-phrase but no TTY.\n"
+                "Run from terminal, use --gui, or pre-seed cache once."
+            )
+        pw_try = getpass.getpass(f"Pass-phrase for [{ns}]: ")
+        try:
+            _decrypt(blob, pw_try); pw = pw_try
+            _cache_passphrase(ns, pw)
+        except Exception:
+            print("❌  Wrong pass-phrase. Try again.")
+
+    return _decrypt(blob, pw)
+
+# ───────── CLI wiring ──────────────
+def _main() -> None:
+    ap = argparse.ArgumentParser(description="Encrypted-secret manager")
+    ap.add_argument("--gui",       action="store_true",
+                    help="launch Tkinter setup window")
+    ap.add_argument("--init",      nargs=1, metavar="KEYNAME",
+                    help="initialise a single secret")
+    ap.add_argument("--init-many", action="store_true",
+                    help="initialise all TOKEN_KEYS")
+    ap.add_argument("--purge-all", action="store_true",
+                    help="delete every stored secret and cache")
+    args = ap.parse_args()
+
+    if args.gui:
+        from secure_key_gui import SetupGUI  # import the class
+        SetupGUI().mainloop()  # ← open the window
+    elif args.init:
+        _init_one(args.init[0])
+    elif args.init_many:
+        _init_many()
+    elif args.purge_all:
+        _purge_all()
+    else:
+        ap.print_help()
+
+if __name__ == "__main__":
+    _main()
