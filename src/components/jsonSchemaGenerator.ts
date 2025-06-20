@@ -147,11 +147,16 @@ function buildHeaderFromRule(
     : (JSON.parse(llmRule) as IRule[]);
 
   const root: JsonSchema = {};
-  type StackItem = { node: JsonSchema; level: number; nodeType: "object" | "array" };
+  type StackItem = {
+    node: JsonSchema;
+    level: number;
+    nodeType: "object" | "array";
+  };
   const stack: StackItem[] = [{ node: root, level: 0, nodeType: "object" }];
 
   for (const r of ruleArray) {
-    while (stack.length && stack[stack.length - 1].level >= r.level) stack.pop();
+    while (stack.length && stack[stack.length - 1].level >= r.level)
+      stack.pop();
     if (!stack.length) stack.push({ node: root, level: 0, nodeType: "object" });
 
     const { node: parent, nodeType: parentType } = stack[stack.length - 1];
@@ -159,7 +164,11 @@ function buildHeaderFromRule(
     switch (r.type) {
       case "object":
         parent[r.key] = {};
-        stack.push({ node: parent[r.key] as JsonSchema, level: r.level, nodeType: "object" });
+        stack.push({
+          node: parent[r.key] as JsonSchema,
+          level: r.level,
+          nodeType: "object",
+        });
         break;
 
       case "string":
@@ -211,7 +220,10 @@ function generateCoreSchema(
   allFields
     .filter((f) => f.parentKey === parentKey)
     .forEach((field) => {
-      const prop: JsonSchema = { description: field.aiPrompt || "", type: norm(field.type) };
+      const prop: JsonSchema = {
+        description: field.aiPrompt || "",
+        type: norm(field.type),
+      };
 
       if (field.type === "array-object") {
         const kids = allFields.filter((cf) => cf.parentKey === field.key);
@@ -274,7 +286,11 @@ function applyRulesRecursively(root: JsonSchema, rules: IRule[]) {
   while (q.length) {
     const node = q.shift()!;
     const kind: SchemaKind | undefined =
-      node.type === "object" ? "object" : node.type === "array" ? "array" : undefined;
+      node.type === "object"
+        ? "object"
+        : node.type === "array"
+          ? "array"
+          : undefined;
 
     if (kind) {
       for (const r of rules) {

@@ -40,7 +40,6 @@
  *    handling in providerSnippets.ts – the helpers will auto‑adapt.
  * -------------------------------------------------------------- */
 
-
 import { buildMainTemplate } from "./providerSnippets";
 
 /* ──────────── Types ────────────────────────────────────────────── */
@@ -164,8 +163,8 @@ const ADAPTERS = {
     getSchema: (r: unknown) =>
       stripJsonSchemaWrapper(
         (r as { schema?: unknown }).schema ??
-        (r as { json_schema?: { schema?: unknown } }).json_schema?.schema ??
-        (r as { input_schema?: unknown }).input_schema,
+          (r as { json_schema?: { schema?: unknown } }).json_schema?.schema ??
+          (r as { input_schema?: unknown }).input_schema,
       ),
   },
 } as const satisfies Record<string, Adapter>;
@@ -233,7 +232,7 @@ function buildModel(
 
       attr.push(
         `${IND}${safePy(propName)}: ${typ}` +
-        (def.description ? `  # ${def.description}` : ""),
+          (def.description ? `  # ${def.description}` : ""),
       );
     });
 
@@ -259,15 +258,14 @@ export function generateHelperFiles(
   modelKey?: string,
   schemaId?: string,
 ): HelperFiles {
-  const parsed   = JSON.parse(schemaJson);
-  const adapter  = ADAPTERS[provider] ?? ADAPTERS.default;
+  const parsed = JSON.parse(schemaJson);
+  const adapter = ADAPTERS[provider] ?? ADAPTERS.default;
 
-  const schema   = adapter.getSchema(parsed);
-  if (!schema)
-    throw new Error(`Schema not found for provider “${provider}”`);
+  const schema = adapter.getSchema(parsed);
+  if (!schema) throw new Error(`Schema not found for provider “${provider}”`);
 
-  const rawName  = schemaId ?? adapter.getName(parsed) ?? "schema";
-  const id       = safePy(rawName);
+  const rawName = schemaId ?? adapter.getName(parsed) ?? "schema";
+  const id = safePy(rawName);
   const modelCls = toClass(id);
 
   const { code: modelCode, hasArray, layout } = buildModel(schema, id);
