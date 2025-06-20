@@ -9,5 +9,5 @@ directory = "./dist"        # Vite build output
 command  = "pnpm run build"
 
 
-[vars]                       # passed to Vite at build time
+[vars]                       # passed to Vite at build
 VITE_CF_SITE_KEY = "0x4AAAAAABSR5TfFVPaT76uB"
