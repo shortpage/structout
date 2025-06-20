@@ -67,6 +67,8 @@ import rawProfanity from "leo-profanity";
 import styles from "../style/FieldEditor.module.css";
 import { selectOptions, typeToIcon } from "../lib/constants";
 import { SchemaField } from "../SchemaDesigner";
+import { toCamel } from "../utils/toCamel";
+import { isLegalId } from "../utils/idValidator";
 
 /* ---------- profanity dictionary ---------------------------------- */
 const leoProfanity: typeof rawProfanity = rawProfanity.default ?? rawProfanity;
@@ -440,7 +442,8 @@ const FieldEditor: React.FC<Props> = ({
             helperText={editErr}
             value={eKey}
             onChange={(e) => {
-              const v = e.target.value;
+              const raw = e.target.value;
+              const v = isLegalId(raw) ? raw : toCamel(raw);
               setEKey(v);
               setEditErr(unsafe(v) ? "Disallowed text" : "");
             }}
@@ -475,7 +478,7 @@ const FieldEditor: React.FC<Props> = ({
             onClick={() => {
               if (idx == null) return;
               const arr = [...fields];
-              arr[idx].key = eKey;
+              arr[idx].key = toCamel(eKey.trim());
               arr[idx].type = eType;
               arr[idx].aiPrompt = ePrompt;
               onChangeFields(arr);

@@ -23,7 +23,7 @@
  * File   : SchemaDesigner.tsx
  * Author : Sesh Ragavachari
  * Date   : 2025-06-09
- * Version: 1.0
+ * Version: 1.1  (🔄 rename-in-place logic)
  *
  * Interactive middle pane of the StructOut workbench. Users edit
  * a nested field structure, set metadata, and save / delete schemas
@@ -31,20 +31,9 @@
  * regenerated on every change and sent upward via
  * onJsonSchemaGenerated().
  *
- *   Central authoring surface for field definitions. Converts the
- *  user's table edits into a valid draft‑07 JSON Schema and streams
- *  the string upward via `onJsonSchemaGenerated()`.
- *
- *  Data model
- *    • `fields`        – Flat array of `SchemaField` objects.
- *      A flat list avoids deep tree diffing; nesting is derived
- *      from the `parentId` property when needed.
- *    • `historyRef`    – Simple bounded stack to support undo/redo.
- *
- *  Persistence
- *    • Drafts are written to LocalStorage under
- *      `structout:schema:{providerId}:{schemaName}`.
- *    • A `storage` event is fired so other tabs update reactively.
+ *  ➟ v1.1 adds in-place ID renaming: when the user alters the schema ID
+ *   and clicks Save, the old localStorage entry is removed and replaced
+ *   by the new one instead of creating a duplicate.
  * -------------------------------------------------------------- */
 
 import React, {
@@ -54,6 +43,7 @@ import React, {
   useImperativeHandle,
   useDeferredValue,
   startTransition,
+  useRef, // 🔄 rename-in-place
 } from "react";
 import Box from "@mui/material/Box";
 import {
@@ -82,6 +72,8 @@ import {
   EditorCol,
   GAP,
 } from "./style/SchemaDesignerLayout";
+import { toCamel } from "./utils/toCamel";
+import { isLegalId } from "./utils/idValidator";
 
 /* ---------- theme local to the designer pane ------------------- */
 const muiTheme = createTheme({
@@ -179,6 +171,12 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
       sx={{ flex: 1, minWidth: 240, "& input": { fontSize: 13 } }}
       value={metaDesc}
       onChange={(e) => onMetaDesc(e.target.value)}
+      slotProps={{
+        // <-- new home for “inner-element” props
+        htmlInput: {
+          maxLength: 250, // 250-char clamp
+        },
+      }}
     />
 
     <Tooltip title="New blank schema">
@@ -259,6 +257,9 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
     const [saved, setSaved] = useState(false);
     const [confirm, setConfirm] = useState(false);
 
+    /* 🔄 remember last stored key for rename-in-place ------------ */
+    const prevKeyRef = useRef<string | null>(null);
+
     /* ---------- imperative setter (eslint-clean) ------------------- */
 
     /** legacy import format */
@@ -282,7 +283,7 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
       setSchemaState(input: unknown) {
         if (!isLocalSchemaState(input)) return; // bail out early
 
-        /* 1️⃣  load the field array */
+        /* 1️⃣ load the field array */
         const {
           fields: fld,
           metadataName,
@@ -291,9 +292,13 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
         } = input;
         setFields(fld);
 
-        /* 2️⃣  populate ID + Description from whichever keys exist */
-        setMetaName(metadataName ?? header?.schemaId ?? "");
+        /* 2️⃣ populate ID + Description from whichever keys exist */
+        const loadedName = metadataName ?? header?.schemaId ?? "";
+        setMetaName(loadedName);
         setMetaDesc(metadataDescription ?? header?.description ?? "");
+
+        /* 3️⃣ remember the corresponding storage key */
+        prevKeyRef.current = `schema_metadata_${loadedName.trim()}`; // 🔄
       },
     }));
 
@@ -352,15 +357,28 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
 
     const doSave = () => {
       if (!canSave) return;
+
+      const newKey = `schema_metadata_${metaName.trim()}`; // 🔄
+      const payload = JSON.stringify({
+        metadataName: metaName.trim(),
+        metadataDescription: metaDesc.trim(),
+        fields,
+        folderCategory: "saved",
+      });
+
       try {
-        const payload = JSON.stringify({
-          metadataName: metaName.trim(),
-          metadataDescription: metaDesc.trim(),
-          fields,
-          folderCategory: "saved",
-        });
-        localStorage.setItem(keyLocal, payload);
-        fireStorageEvent(keyLocal, null, payload);
+        /* 1️⃣ remove old key if ID changed --------------------- */
+        if (prevKeyRef.current && prevKeyRef.current !== newKey) {
+          localStorage.removeItem(prevKeyRef.current);
+          fireStorageEvent(prevKeyRef.current, null, null);
+        }
+
+        /* 2️⃣ write new key ----------------------------------- */
+        localStorage.setItem(newKey, payload);
+        fireStorageEvent(newKey, null, payload);
+        prevKeyRef.current = newKey; // 🔄
+
+        /* 3️⃣ UX feedback ------------------------------------- */
         startTransition(() => {
           setSaved(true);
           setTimeout(() => setSaved(false), 1500);
@@ -375,6 +393,7 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
       setMetaName("");
       setMetaDesc("");
       setSaved(false);
+      prevKeyRef.current = null; // 🔄
       onJsonSchemaGenerated("");
     };
 
@@ -405,7 +424,7 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
                 <HeaderBar
                   metaName={metaName}
                   metaDesc={metaDesc}
-                  onMetaName={setMetaName}
+                  onMetaName={(v) => setMetaName(isLegalId(v) ? v : toCamel(v))}
                   onMetaDesc={setMetaDesc}
                   canSave={!!canSave}
                   saved={saved}

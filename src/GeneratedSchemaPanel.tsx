@@ -53,7 +53,11 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DownloadIcon from "@mui/icons-material/Download";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import {
+  oneLight,
+  oneDark,
+} from "react-syntax-highlighter/dist/esm/styles/prism";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
 
 import SectionHeader from "./components/SectionHeader";
 import {
@@ -108,6 +112,39 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
   const [, setLang] = useState<"json" | "python">("json");
   const [, setHelpers] = useState<HelperFiles | null>(null);
   const [toast, setToast] = useState<string | undefined>();
+
+  // honour system preference once; persist thereafter
+  const [darkMode, setDarkMode] = useState<boolean>(
+    () =>
+      (localStorage.getItem("schema_dark") ??
+        (window.matchMedia?.("(prefers-color-scheme: dark)").matches
+          ? "1"
+          : "0")) === "1",
+  );
+
+  const codeBase = {
+    borderRadius: 4,
+    fontSize: 13,
+    lineHeight: 1.4,
+    padding: "16px 0 16px 0", // leave gutter free
+  } as const;
+
+  const gutter = (dark: boolean) => ({
+    minWidth: 38,
+    paddingRight: 12,
+    textAlign: "right",
+    userSelect: "none" as const,
+    color: dark ? "#889" : "#667",
+    background: dark ? "#1b1d21" : "#ececec",
+  });
+
+  useEffect(() => {
+    localStorage.setItem("schema_dark", darkMode ? "1" : "0");
+  }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem("schema_dark", darkMode ? "1" : "0");
+  }, [darkMode]);
 
   /* provider change → reset modelKey + view ---------------------- */
   useEffect(() => {
@@ -231,7 +268,12 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
           </Select>
         </FormControl>
 
-        <FormControl variant="standard" size="small" sx={{ minWidth: 150 }}>
+        <FormControl
+          variant="standard"
+          size="small"
+          sx={{ minWidth: 150 }}
+          disabled={view !== "helper:main"}
+        >
           <InputLabel>Model</InputLabel>
           <Select
             value={safeModelKey}
@@ -271,6 +313,16 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
               <DownloadIcon fontSize="inherit" />
             </IconButton>
           </span>
+        </Tooltip>
+
+        <Tooltip title={darkMode ? "Light mode" : "Dark mode"}>
+          <IconButton
+            size="small"
+            onClick={() => setDarkMode((p) => !p)}
+            sx={{ ml: 0.5 }}
+          >
+            <Brightness4Icon fontSize="inherit" />
+          </IconButton>
         </Tooltip>
 
         {copied && (
@@ -336,9 +388,14 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
           {view === "schema" && jsonSchema && (
             <SyntaxHighlighter
               language="json"
-              style={oneLight}
-              customStyle={codeStyle}
+              style={darkMode ? oneDark : oneLight}
+              customStyle={{
+                ...codeBase,
+                background: darkMode ? "#1e1e1e" : "#f5f5f5",
+              }}
               wrapLongLines
+              showLineNumbers
+              lineNumberStyle={gutter(darkMode) as React.CSSProperties}
             >
               {jsonSchema}
             </SyntaxHighlighter>
@@ -347,9 +404,14 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
           {view.startsWith("helper") && (
             <SyntaxHighlighter
               language="python"
-              style={oneLight}
-              customStyle={codeStyle}
+              style={darkMode ? oneDark : oneLight}
+              customStyle={{
+                ...codeStyle,
+                background: darkMode ? "#1e1e1e" : "#f5f5f5",
+              }}
               wrapLongLines
+              showLineNumbers
+              lineNumberStyle={gutter(darkMode) as React.CSSProperties}
             >
               {blob}
             </SyntaxHighlighter>

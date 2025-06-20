@@ -30,6 +30,7 @@
     "@mui/icons-material": "^7.1.1",
     "@mui/material": "^7.1.1",
     "@mui/x-tree-view": "^8.5.1",
+    "change-case": "^5.4.4",
     "github-markdown-css": "^5.8.1",
     "jszip": "^3.10.1",
     "leo-profanity": "^1.7.0",
@@ -44,6 +45,7 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250620.0",
     "@tauri-apps/cli": "^2.5.0",
     "@types/node": "^22.15.30",
     "@types/react": "^19.1.6",
