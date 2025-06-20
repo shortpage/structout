@@ -21,7 +21,7 @@
  * ------------------------------------------------------------------
  * File   : jsonSchemaGenerator.ts
  * Author : Sesh Ragavachari
- * Date   : 2025-06-09
+ * Date   : 2025-06-10
  * Version: 1.1  (+ schemaExclude support)
  *
  *  Pure helper that takes a `SchemaField[]` or partial `JsonSchema`

@@ -21,7 +21,7 @@
  * ------------------------------------------------------------------
  * File   : providerSnippets.ts
  * Author : Sesh Ragavachari
- * Date   : 2025-06-09
+ * Date   : 2025-06-10
  * Version: 1.3  (+ run header; indent-safe; Pydantic-v1/2 pretty print)
  *
  *  Emit a **self-contained Python demo** for the user-generated
@@ -91,10 +91,10 @@ export function buildMainTemplate(
   modelKey?: ModelKey,
 ): string {
   /* ---------- look-ups --------------------------------------- */
-  const meta       = PROVIDER_META[provider] as ProviderMeta;
-  const keySafe    = (modelKey ?? meta.defaultModel) as keyof typeof meta.models;
-  const modelId    = meta.models[keySafe];
-  const needsTool  = meta.needsToolName === true;
+  const meta = PROVIDER_META[provider] as ProviderMeta;
+  const keySafe = (modelKey ?? meta.defaultModel) as keyof typeof meta.models;
+  const modelId = meta.models[keySafe];
+  const needsTool = meta.needsToolName === true;
   const clientCtor = `${meta.clientCtor}(api_key=api_key${meta.clientExtra ?? ""})`;
 
   /* ---------- filenames -------------------------------------- */

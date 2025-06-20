@@ -21,7 +21,7 @@
  * ------------------------------------------------------------------
  * File   : providerRegistry.ts
  * Author : Sesh Ragavachari
- * Date   : 2025-06-09
+ * Date   : 2025-06-10
  * Version: 1.1  (+ schemaExclude support)
  *
  *  Central registry that wraps the quirks of each LLM vendor SDK
@@ -294,5 +294,4 @@ payload = msg.parsed if msg.parsed else json.loads(msg.content)`,
 
 /* ──────────── convenience exports ────────────────────────────── */
 export type ProviderId = keyof typeof PROVIDER_META;
-export const PROVIDERS =
-  Object.keys(PROVIDER_META) as readonly ProviderId[];
+export const PROVIDERS = Object.keys(PROVIDER_META) as readonly ProviderId[];
