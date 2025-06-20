@@ -1,0 +1,13 @@
+name               = "structout"
+main               = "src/worker.ts"
+compatibility_date = "2025-06-19"
+
+[assets]
+directory = "./dist"        # Vite build output
+
+[build]
+command  = "pnpm run build"
+
+
+[vars]                       # passed to Vite at build time
+VITE_CF_SITE_KEY = "0x4AAAAAABSR5TfFVPaT76uB"
