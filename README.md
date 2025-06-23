@@ -12,7 +12,7 @@
 git clone https://github.com/shortpage/structout.git
 cd structout
 pnpm install      # or npm i / yarn
-pnpm dev          # http://localhost:5173
+pnpm dev          # http://localhost:1420
 ```
 
 **Prereqs**
