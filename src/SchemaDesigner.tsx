@@ -61,6 +61,7 @@ import SaveIcon from "@mui/icons-material/Save";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import LocalSaveConfirmDialog from "./components/LocalSaveConfirmDialog";
 
 import FieldEditor from "./components/FieldEditor";
 import jsonSchemaGenerator from "./components/jsonSchemaGenerator";
@@ -256,6 +257,7 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
     const [metaDesc, setMetaDesc] = useState("");
     const [saved, setSaved] = useState(false);
     const [confirm, setConfirm] = useState(false);
+    const [showLocalDlg, setShowLocalDlg] = useState(false);
 
     /* 🔄 remember last stored key for rename-in-place ------------ */
     const prevKeyRef = useRef<string | null>(null);
@@ -408,6 +410,15 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
       setConfirm(false);
     };
 
+    const handleLocalConfirmed = () => {
+      setShowLocalDlg(false);
+      doSave();
+    };
+
+    const handleLocalCancelled = () => {
+      setShowLocalDlg(false);
+    };
+
     /* --------------------------- render ----------------------- */
     return (
       <ThemeProvider theme={muiTheme}>
@@ -428,7 +439,7 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
                   onMetaDesc={setMetaDesc}
                   canSave={!!canSave}
                   saved={saved}
-                  onSave={doSave}
+                  onSave={() => setShowLocalDlg(true)}
                   hasSaved={hasSaved}
                   onDelete={() => setConfirm(true)}
                   onNew={newSchema}
@@ -460,6 +471,13 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
               </Button>
             </DialogActions>
           </Dialog>
+          {/* local-storage warning dialog */}
+          <LocalSaveConfirmDialog
+            open={showLocalDlg}
+            schemaName={metaName}
+            onConfirm={handleLocalConfirmed}
+            onCancel={handleLocalCancelled}
+          />
         </Root>
       </ThemeProvider>
     );

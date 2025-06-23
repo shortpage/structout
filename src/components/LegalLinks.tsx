@@ -85,7 +85,7 @@ export default function LegalLinks(): React.JSX.Element {
         </button>
         <a
           className="link-button"
-          href="https://github.com/seshragav/structout/blob/main/docs/license.md"
+          href="https://github.com/shortpage/structout/blob/main/LICENSE"
           target="_blank"
           rel="noreferrer"
         >
