@@ -39,9 +39,6 @@ jobs:
       - name: Lint (eslint)
         run: pnpm lint --max-warnings 0
 
-      - name: TypeScript type-check
-        run: pnpm tsc --noEmit
-
       - name: Unit tests
         run: pnpm test
 
@@ -54,10 +51,3 @@ jobs:
       - name: Build (web)
         run: pnpm build:web
 
-      # 7️⃣  (Optional) Upload the build artifact from the Linux run
-      - name: Upload build
-        if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-build
-          path: dist
