@@ -245,7 +245,7 @@ function buildModel(
   return {
     code: header.join("\n") + classLines.join("\n") + "\n",
     hasArray,
-    layout: layoutLines.join("\n"),
+    layout: layoutLines.filter((l) => !l.startsWith("  ")).join("\n"),
   };
 }
 
