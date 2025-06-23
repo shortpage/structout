@@ -9,7 +9,7 @@
 ## 1 Clone & bootstrap
 
 ```
-git clone https://github.com/seshragav/structout.git
+git clone https://github.com/shortpage/structout.git
 cd structout
 pnpm install      # or npm i / yarn
 pnpm dev          # http://localhost:5173
@@ -31,11 +31,6 @@ pnpm tauri dev    # hot‑reload desktop shell
 pnpm tauri build  # signed installers → src-tauri/target/release/bundle
 ```
 
-### Prefer a pre‑built binary?
-
-[![Get Structout from the Microsoft Store](https://img.shields.io/static/v1?label=&message=Microsoft%20Store&color=blue&logo=windows)](https://apps.microsoft.com/detail/9NBLGGH6) <!-- replace with real Store ID -->
-
----
 
 ## 3 Scripts
 
