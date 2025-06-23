@@ -1,3 +1,5 @@
+[![CI](https://github.com/shortpage/structout/actions/workflows/ci.yml/badge.svg)](https://github.com/shortpage/structout/actions/workflows/ci.yml)
+
 # Structout
 
 
