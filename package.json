@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "predeploy": "pnpm run build:web",
-    "deploy": "gh-pages -d dist -t true",
+    "deploy": "gh-pages -d dist --nojekyll",
     "sec:js": "npm audit --production && npx snyk test || true",
     "sec:rust": "cd src-tauri && cargo audit -q && cargo geiger -q",
     "sec:code": "npx semgrep --config \"p/tslint-security\"",
