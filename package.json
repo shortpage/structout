@@ -7,18 +7,13 @@
   "scripts": {
     "dev": "vite",
     "tauri:dev": "tauri dev",
-
-    "build:web": "tsc && vite build",          // 👉 leaves your web build exactly as before
+    "build:web": "tsc && vite build",
     "build:tauri": "tauri build",
     "build": "npm run build:web",
     "preview": "vite preview",
     "tauri": "tauri",
-
-    /* ---------- NEW: GitHub Pages deploy ---------- */
     "predeploy": "pnpm run build:web",
     "deploy": "gh-pages -d dist -t true",
-    /* ---------------------------------------------- */
-
     "sec:js": "npm audit --production && npx snyk test || true",
     "sec:rust": "cd src-tauri && cargo audit -q && cargo geiger -q",
     "sec:code": "npx semgrep --config \"p/tslint-security\"",
