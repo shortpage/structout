@@ -59,3 +59,12 @@ Fork → branch → `pnpm lint && pnpm test` → PR.
 CI must pass.
 
 © 2025 Sesh Ragavachari — MIT License
+
+## Acknowledgements
+
+StructOut is built on a fantastic open-source stack.  
+Special thanks to **[Pydantic](https://docs.pydantic.dev/)** for providing the
+runtime data-validation engine that powers our Python side.
+
+Pydantic is MIT-licensed; the full licence text is included in
+[`LICENSES/pydantic.LICENSE`](./LICENSES/pydantic.LICENSE).
