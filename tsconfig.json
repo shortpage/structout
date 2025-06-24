@@ -20,7 +20,7 @@
     "allowSyntheticDefaultImports": true,
     "types": ["vite/client", "node", "react", "react-dom", "@cloudflare/workers-types/experimental"]
   },
-  "include": ["src", "src/global.d.ts"],
+  "include": ["src", "src/**/*", "src/global.d.ts"],
   "exclude": ["node_modules", "dist"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

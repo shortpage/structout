@@ -1,0 +1,39 @@
+# mkdocs.yml
+site_name: StructOut Docs                # Appears in the header & tab title
+site_url: https://your-user.github.io/structout   # Update when you deploy
+repo_url: https://github.com/your-user/structout  # “Edit on GitHub” links
+edit_uri: edit/main/docs/                # Points the “Edit” button to /docs/
+
+# ───────────────────────────────────────────────
+theme:
+  name: material
+  features:
+    - navigation.sections      # Collapsible sidebar sections
+    - navigation.top           # Back-to-top button & header links
+    - content.code.copy        # Copy-to-clipboard on code fences
+    - search.highlight         # Highlights search terms in page
+  palette:                     # Optional: light/dark toggle
+    - scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+# ───────────────────────────────────────────────
+plugins:
+  - search                     # Only the default full-text search
+
+# ───────────────────────────────────────────────
+markdown_extensions:           # Nice defaults for richer Markdown
+  - admonition                 # !!! note / warning / tip blocks
+  - pymdownx.superfences       # Nest code fences & tabs
+  - pymdownx.tabbed            # ::: tabs directive
+  - pymdownx.highlight         # Better syntax highlighting
+
+# ───────────────────────────────────────────────
+nav:                           # Sidebar / top nav structure
+  - Home: index.md
+  - Quick Start: api/core.md

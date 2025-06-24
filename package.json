@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-
   "scripts": {
     "dev": "vite",
     "tauri:dev": "tauri dev",
@@ -13,25 +12,20 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "predeploy": "pnpm run build:web",
-    "deploy": "gh-pages -d dist --nojekyll",
+    "deploy": "gh-pages -d dist --nojekyll --dotfiles",
     "sec:js": "npm audit --production && npx snyk test || true",
     "sec:rust": "cd src-tauri && cargo audit -q && cargo geiger -q",
     "sec:code": "npx semgrep --config \"p/tslint-security\"",
     "sec": "npm run sec:js && npm run sec:rust && npm run sec:code",
-
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --check .",
-
     "prune:exports": "ts-prune > ts-prune.txt",
     "prune:exports:ci": "ts-prune --error",
-
     "deps:check": "depcheck",
     "deps:prune": "npm prune",
     "deps:audit": "npm audit --production",
-
     "test": "vitest run"
   },
-
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
@@ -52,7 +46,6 @@
     "styled-components": "^6.1.18",
     "uuid": "^11.1.0"
   },
-
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250620.0",
     "@tauri-apps/cli": "^2.5.0",
@@ -76,21 +69,19 @@
     "gh-pages": "^6.3.0",
     "prettier": "^3.5.3",
     "ts-prune": "^0.10.3",
+    "typedoc": "^0.28.5",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "vitest": "^3.2.2"
   },
-
   "overrides": {
     "prismjs": "^1.29.0"
   },
-
   "pnpm": {
     "overrides": {
       "d3-color": "^3.1.0",
       "prismjs": "^1.30.0"
     }
   },
-
   "packageManager": "pnpm@9.3.0"
 }

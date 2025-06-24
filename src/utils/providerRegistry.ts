@@ -59,11 +59,9 @@ interface ProviderManifest {
 
 /* ──────────── manifest loader (browser & node) ───────────────── */
 async function loadManifest(provider: string): Promise<ProviderManifest> {
-  /**  The file sits at /api/<name>.json in both dev & prod.   **/
-  const res = await fetch(`/api/${provider}.json`);
-  if (!res.ok) {
-    throw new Error(`Unable to load /api/${provider}.json  (${res.status})`);
-  }
+  const url = `${import.meta.env.BASE_URL}api/${provider}.json`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Unable to load ${url}  (${res.status})`);
   return (await res.json()) as ProviderManifest;
 }
 

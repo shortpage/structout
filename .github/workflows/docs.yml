@@ -1,0 +1,44 @@
+# .github/workflows/docs.yml
+name: docs
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:   # manual trigger button
+
+permissions:
+  contents: write       # allow the bot to push to gh-pages
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # (Optional) keep Git history on gh-pages so "Edit this page" links work
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # Set up Python
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      # Cache pip & MkDocs’ .cache folder for faster builds
+      - name: Restore MkDocs cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            .cache
+          key: ${{ runner.os }}-mkdocs-${{ hashFiles('**/requirements.txt', 'mkdocs.yml') }}
+
+      # Install MkDocs + theme
+      - run: pip install mkdocs-material
+
+      # Build site & push to gh-pages
+      - run: mkdocs gh-deploy --force --clean   # --clean wipes stale files
