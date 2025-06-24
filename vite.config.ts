@@ -29,15 +29,33 @@
  *  • Relative `base: "./"` for production so Tauri can load via file://
  *  • Rollup manualChunks helper → neat, cache-friendly vendor files
  * -------------------------------------------------------------- */
+
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-export default defineConfig(({ command }) => {
-  const isDev = command === "serve";
-  const tauriPort = process.env.TAURI_DEV_PORT
-    ? Number(process.env.TAURI_DEV_PORT)
-    : 1420;
+// ────────────────────────────────────────────────────────────────────
+// Adjust **ONLY** this constant if your repo slug ever changes
+// (e.g.   github.com/<you>/<REPO_NAME>  →  https://<you>.github.io/<REPO_NAME>/)
+const REPO_NAME = "structout";
+// ────────────────────────────────────────────────────────────────────
 
+export default defineConfig(({ command, mode }) => {
+  /* ----------------------------------------------------------------
+   * Build context helpers
+   * ---------------------------------------------------------------- */
+  const isDev = command === "serve";
+
+  // Tauri dev server port (falls back to 1420)
+  const tauriPort = Number(process.env.TAURI_DEV_PORT || 1420);
+
+  // Heuristic: when `tauri dev|build` runs, TAURI_PLATFORM is set
+  // → desktop bundle must keep relative URLs so file:// loads assets.
+  const forTauri = Boolean(process.env.TAURI_PLATFORM);
+
+  /* ----------------------------------------------------------------
+   * Core Vite config
+   * ---------------------------------------------------------------- */
   return {
     plugins: [react()],
 
@@ -48,10 +66,21 @@ export default defineConfig(({ command }) => {
     server: {
       port: isDev ? tauriPort : 5173,
       strictPort: true,
-      // proxy block removed – no local API server
     },
 
-    base: command === "build" ? "./" : "/",
+    /* --------------------------------------------------------------
+     * STEP 1 – GitHub Pages needs a repo-prefixed base path.
+     *
+     *  – `vite build`  (your `build:web` script)     → "/structout/"
+     *  – `tauri build` (desktop bundle)              → "./"
+     *  – `vite dev` / `tauri dev`                   → "/"
+     * -------------------------------------------------------------- */
+    base:
+      command === "build"
+        ? forTauri
+          ? "./"
+          : `/${REPO_NAME}/`
+        : "/",
 
     build: {
       target: "es2020",
