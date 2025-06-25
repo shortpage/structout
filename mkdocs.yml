@@ -24,7 +24,6 @@ nav:
       - llm-providers/bedrock.md
       - llm-providers/cohere.md
       - llm-providers/groq.md
-      - llm-providers/mistral.md
 
   # --- refreshed label
   - Credentials Setup: credentials-setup.md
@@ -162,7 +161,7 @@ plugins:
             - url: https://docs.pydantic.dev/latest/objects.inv
             - url: https://fastapi.tiangolo.com/objects.inv
   - llmstxt:
-      enabled: !ENV [CI, false]
+      enabled: !ENV [CI, "false"]
       full_output: llms-full.txt
       markdown_description: >-
         StructOut is a TypeScript workbench that lets you design strict
