@@ -21,7 +21,7 @@
  * ------------------------------------------------------------------
  * File   : vite.config.ts
  * Author : Sesh Ragavachari
- * Date   : 2025-06-09
+ * Date   : 2025-06-10
  * Version: 1.0
  *
  *  • React plugin + Emotion dedupe
