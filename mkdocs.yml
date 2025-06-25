@@ -134,7 +134,6 @@ watch:
 plugins:
   - search
   - social
-  - glightbox
   - mkdocstrings:
       handlers:
         python:
