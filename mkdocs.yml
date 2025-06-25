@@ -1,39 +1,179 @@
 # mkdocs.yml
-site_name: StructOut Docs                # Appears in the header & tab title
-site_url: https://your-user.github.io/structout   # Update when you deploy
-repo_url: https://github.com/your-user/structout  # “Edit on GitHub” links
-edit_uri: edit/main/docs/                # Points the “Edit” button to /docs/
+site_name: StructOut
+site_description: Interactive JSON-Schema workbench for LLMs—design, validate and extract typed, structured output from any provider with one-click client snippets
+strict: true
+site_url: https://ai.structout.dev          # ⇐ update when you pick the final domain
 
-# ───────────────────────────────────────────────
+repo_name: seshragav/structout
+repo_url: https://github.com/seshragav/structout
+edit_uri: edit/main/docs/
+copyright: © Sesh Ragavachari 2025 to present
+
+nav:
+  - Introduction: index.md
+  - Installation: installation.md
+  - Quick Start: quick-start.md
+
+  # --- refreshed label
+  - LLM Providers:
+      - llm-providers/index.md
+      - llm-providers/openai.md
+      - llm-providers/anthropic.md
+      - llm-providers/gemini.md
+      - llm-providers/google.md
+      - llm-providers/bedrock.md
+      - llm-providers/cohere.md
+      - llm-providers/groq.md
+      - llm-providers/mistral.md
+
+  # --- refreshed label
+  - Credentials Setup: credentials-setup.md
+
+  - Examples:
+      - examples/index.md
+      - examples/pydantic-model.md
+      - examples/weather-agent.md
+      - examples/bank-support.md
+      - examples/sql-gen.md
+      - examples/flight-booking.md
+      - examples/rag.md
+      - examples/stream-markdown.md
+      - examples/stream-whales.md
+      - examples/chat-app.md
+      - examples/question-graph.md
+
+  # --- refreshed label
+  - Editor Quick Runs: editor-quick-runs.md
+
+  - License: license.md
+
+extra:
+  generator: false           # hide “Made with Material for MkDocs”
+
 theme:
   name: material
+  custom_dir: docs/.overrides
+  palette:
+    - media: "(prefers-color-scheme)"
+      primary: pink
+      accent: pink
+      toggle:
+        icon: material/brightness-auto
+        name: "Switch to light mode"
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: pink
+      accent: pink
+      toggle:
+        icon: material/brightness-7
+        name: "Switch to dark mode"
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: pink
+      accent: pink
+      toggle:
+        icon: material/brightness-4
+        name: "Switch to system preference"
   features:
-    - navigation.sections      # Collapsible sidebar sections
-    - navigation.top           # Back-to-top button & header links
-    - content.code.copy        # Copy-to-clipboard on code fences
-    - search.highlight         # Highlights search terms in page
-  palette:                     # Optional: light/dark toggle
-    - scheme: default
-      toggle:
-        icon: material/weather-night
-        name: Switch to dark mode
-    - scheme: slate
-      toggle:
-        icon: material/weather-sunny
-        name: Switch to light mode
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotate
+    - content.code.copy
+    - content.code.select
+    - navigation.path
+    - navigation.indexes
+    - navigation.sections
+    - navigation.tracking
+    - toc.follow
+  logo: img/logo-white.svg
+  favicon: favicon.ico
 
-# ───────────────────────────────────────────────
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+extra_css:
+  - extra/tweaks.css
+
+extra_javascript:
+  - /flarelytics/client.js
+  - https://cdn.jsdelivr.net/npm/algoliasearch@5.20.0/dist/lite/builds/browser.umd.js
+  - https://cdn.jsdelivr.net/npm/instantsearch.js@4.77.3/dist/instantsearch.production.min.js
+  - /javascripts/algolia-search.js
+
+markdown_extensions:
+  - tables
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.mark
+  - pymdownx.superfences
+  - pymdownx.snippets
+  - pymdownx.tilde
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      pygments_lang_class: true
+  - pymdownx.extra:
+      pymdownx.superfences:
+        custom_fences:
+          - name: mermaid
+            class: mermaid
+            format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      options:
+        custom_icons:
+          - docs/.overrides/.icons
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - sane_lists
+
+watch:
+  - structout_core
+  - examples
+
 plugins:
-  - search                     # Only the default full-text search
-
-# ───────────────────────────────────────────────
-markdown_extensions:           # Nice defaults for richer Markdown
-  - admonition                 # !!! note / warning / tip blocks
-  - pymdownx.superfences       # Nest code fences & tabs
-  - pymdownx.tabbed            # ::: tabs directive
-  - pymdownx.highlight         # Better syntax highlighting
-
-# ───────────────────────────────────────────────
-nav:                           # Sidebar / top nav structure
-  - Home: index.md
-  - Quick Start: api/core.md
+  - search
+  - social
+  - glightbox
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [structout_core]
+          options:
+            relative_crossrefs: true
+            members_order: source
+            separate_signature: true
+            show_signature_annotations: true
+            signature_crossrefs: true
+            group_by_category: false
+            heading_level: 3
+          import:
+            - url: https://docs.python.org/3/objects.inv
+            - url: https://docs.pydantic.dev/latest/objects.inv
+            - url: https://fastapi.tiangolo.com/objects.inv
+  - llmstxt:
+      enabled: !ENV [CI, false]
+      full_output: llms-full.txt
+      markdown_description: >-
+        StructOut is a TypeScript workbench that lets you design strict
+        JSON-Schema outputs for LLM prompts and auto-generate
+        provider-specific client snippets.
+      sections:
+        Concepts:
+          - llm-providers/index.md
+          - credentials-setup.md
+        Examples:
+          - examples/*.md
+hooks:
+  - docs/.hooks/main.py
+  - docs/.hooks/algolia.py
