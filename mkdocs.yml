@@ -18,25 +18,14 @@ nav:
       - llm-providers/openai.md
       - llm-providers/anthropic.md
       - llm-providers/gemini.md
-      - llm-providers/google.md
-      - llm-providers/bedrock.md
-      - llm-providers/cohere.md
       - llm-providers/groq.md
+      - llm-providers/perplexity.md
 
   - Credentials Setup: credentials-setup.md
 
   - Examples:
-      - examples/index.md
-      - examples/pydantic-model.md
       - examples/weather-agent.md
       - examples/bank-support.md
-      - examples/sql-gen.md
-      - examples/flight-booking.md
-      - examples/rag.md
-      - examples/stream-markdown.md
-      - examples/stream-whales.md
-      - examples/chat-app.md
-      - examples/question-graph.md
 
   - Editor Quick Runs: editor-quick-runs.md
   - License: license.md
@@ -127,43 +116,6 @@ markdown_extensions:
       custom_checkbox: true
   - sane_lists
 
-watch:
-  - structout_core
-  - examples
 
 plugins:
   - search
-  - social
-  - mkdocstrings:
-      handlers:
-        python:
-          paths: [structout_core]
-          options:
-            relative_crossrefs: true
-            members_order: source
-            separate_signature: true
-            show_signature_annotations: true
-            signature_crossrefs: true
-            group_by_category: false
-            heading_level: 3
-          import:
-            - url: https://docs.python.org/3/objects.inv
-            - url: https://docs.pydantic.dev/latest/objects.inv
-            - url: https://fastapi.tiangolo.com/objects.inv
-  - llmstxt:
-      enabled: !ENV [CI, "false"]
-      full_output: llms-full.txt
-      markdown_description: >-
-        StructOut is a TypeScript workbench that lets you design
-        strict JSON-Schema outputs for LLM prompts and auto-generate
-        provider-specific client snippets.
-      sections:
-        Concepts:
-          - llm-providers/index.md
-          - credentials-setup.md
-        Examples:
-          - examples/*.md
-
-hooks:
-  - docs/.hooks/main.py
-  - docs/.hooks/algolia.py
