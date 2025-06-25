@@ -1,31 +1,35 @@
 site_name: StructOut
-site_description: Interactive JSON-Schema workbench for LLMs—design, validate and extract typed, structured output from any provider with one-click client snippets
+site_description: Interactive JSON-Schema workbench for LLMs—design, validate and extract typed output with one-click client snippets
 strict: true
 site_url: https://ai.structout.dev          # update later
 
 repo_name: seshragav/structout
 repo_url: https://github.com/seshragav/structout
 edit_uri: edit/main/docs/
-copyright: © Sesh Ragavachari 2025 to present
+copyright: © Sesh Ragavachari 2025-present
 
 nav:
   - Introduction: index.md
-  - Installation: installation.md
-  - Quick Start: quick-start.md
+
+  - Guides:
+      - Installation: installation.md
+      - Quick Start: quick-start.md
 
   - LLM Providers:
-      - llm-providers/index.md
-      - llm-providers/openai.md
-      - llm-providers/anthropic.md
-      - llm-providers/gemini.md
-      - llm-providers/groq.md
-      - llm-providers/perplexity.md
+      - Overview: llm-providers/index.md
+      - Adapters:
+          - OpenAI Adapter:       llm-providers/openai.md
+          - Anthropic Adapter:    llm-providers/anthropic.md
+          - Gemini Adapter:       llm-providers/gemini.md
+          - Groq Adapter:         llm-providers/groq.md
+          - Perplexity Adapter:   llm-providers/perplexity.md
 
   - Credentials Setup: credentials-setup.md
 
   - Examples:
-      - examples/weather-agent.md
-      - examples/bank-support.md
+      - Overview: examples/index.md
+      - Weather Agent:               examples/weather-agent.md
+      - Bank Support Chatbot Example: examples/bank-support.md
 
   - Editor Quick Runs: editor-quick-runs.md
   - License: license.md
@@ -35,6 +39,19 @@ extra:
 
 theme:
   name: material
+  features:
+    - navigation.expand
+    - navigation.path
+    - navigation.indexes
+    - navigation.sections
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotate
+    - content.code.copy
+    - content.code.select
+    - toc.follow
   palette:
     - media: "(prefers-color-scheme)"
       primary: pink
@@ -56,18 +73,6 @@ theme:
       toggle:
         icon: material/brightness-4
         name: "Switch to system preference"
-  features:
-    - search.suggest
-    - search.highlight
-    - content.tabs.link
-    - content.code.annotate
-    - content.code.copy
-    - content.code.select
-    - navigation.path
-    - navigation.indexes
-    - navigation.sections
-    - navigation.tracking
-    - toc.follow
   logo: img/logo-white.svg
   favicon: favicon.ico
 
@@ -79,6 +84,7 @@ validation:
 
 extra_css:
   - extra/tweaks.css
+  - extra/nav-tweaks.css      # smaller font on nested links
 
 extra_javascript:
   - /flarelytics/client.js
@@ -115,7 +121,6 @@ markdown_extensions:
   - pymdownx.tasklist:
       custom_checkbox: true
   - sane_lists
-
 
 plugins:
   - search

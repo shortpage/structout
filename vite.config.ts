@@ -39,7 +39,7 @@ import react from "@vitejs/plugin-react";
 const REPO_NAME = "structout";
 // ────────────────────────────────────────────────────────────────────
 
-export default defineConfig(({ command}) => {
+export default defineConfig(({ command }) => {
   /* ----------------------------------------------------------------
    * Build context helpers
    * ---------------------------------------------------------------- */
