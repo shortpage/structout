@@ -30,7 +30,6 @@
  *  • Rollup manualChunks helper → neat, cache-friendly vendor files
  * -------------------------------------------------------------- */
 
-
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -40,7 +39,7 @@ import react from "@vitejs/plugin-react";
 const REPO_NAME = "structout";
 // ────────────────────────────────────────────────────────────────────
 
-export default defineConfig(({ command, mode }) => {
+export default defineConfig(({ command}) => {
   /* ----------------------------------------------------------------
    * Build context helpers
    * ---------------------------------------------------------------- */
@@ -75,12 +74,7 @@ export default defineConfig(({ command, mode }) => {
      *  – `tauri build` (desktop bundle)              → "./"
      *  – `vite dev` / `tauri dev`                   → "/"
      * -------------------------------------------------------------- */
-    base:
-      command === "build"
-        ? forTauri
-          ? "./"
-          : `/${REPO_NAME}/`
-        : "/",
+    base: command === "build" ? (forTauri ? "./" : `/${REPO_NAME}/`) : "/",
 
     build: {
       target: "es2020",
