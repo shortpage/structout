@@ -73,8 +73,9 @@ export default function DemoTour() {
     if (type === "step:after" && index === 6) {
       click('[data-tour="dialog-cancel"]');
     }
-    // @ts-expect-error
-    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) setRun(false);
+    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+      setRun(false);
+    }
   };
 
   return (
