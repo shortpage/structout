@@ -1,108 +1,176 @@
 #!/usr/bin/env python3
 """
-Modern, flat (MUI-style) GUI front-end for secure_key.py
-Tkinter + ttk only, zero extra dependencies.
+secure_key_gui.py – modern flat-style GUI for secure_key.py (v2)
+Tkinter + ttk only, no extra deps.
 """
+
 from __future__ import annotations
+import os
 import tkinter as tk
 from tkinter import ttk
+
 import keyring
 from keyring.errors import PasswordDeleteError
 
-from secure_key import _provider_service, _encrypt, _cache_passphrase
-from constants   import TOKEN_KEYS          # list[str] | list[tuple[str,str]]
+from secure_key import (                   # ← imports from the new helper
+    ENGINES,
+    DEFAULT_ENGINE,
+    _provider_service,
+    _encrypt,
+    _cache_passphrase,
+    _validate_passphrase,                  # used for cache purge on Win
+)
 
-# ──────────────────────────── design tokens ────────────────────────────
-TITLE        = "Secure-Key Setup"
-ICON_B64     = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAThJREFUSEvtVD1KxEAU/jJipwdYJPkGvIB4Ai0stLS1Eay9g95DsLPcTiws9AZ7ATF5E1isBRtZ9smEZMmuWZMBk2qnGphv3vfz3kyEnlfUc31sCFoTHj4iklcA7lakXYjIQ6vcBsCSA5LfALabCqnqzDnXePYX8YKA5AzAlgcbY2yapuL3cRzvG2PeyiJfIrIT4qQgsNZequq934tIY19IatfCqnrrnLvx+KJYdXk+n+/leT611h6p6ksBiKLjLMterbUHqjoJJVkiqNSvql3nqomM5BmAR3/mnfwLAclTEXkq01hPEBjRREQOSU4BjAC8A7iuq/d9GKbJpbWgMSX5CWAXwIeIjCon9QlaTFHVrNCHRvJcRMbV/SRJTpxzz/Xm/5r5Xr+KrjMeghv+Nw1R1wW7cdCa0g9vCLvNhFGZKQAAAABJRU5ErkJggg=="  # (same as before)
-PRIMARY      = "#1976D2"
-PRIMARY_HOV  = "#1565C0"
-PRIMARY_PRS  = "#0D47A1"
-BG_WINDOW    = "#F4F6F8"
-FG_LABEL     = "#5F6368"
-FG_TEXT      = "#202124"
-FONT_UI      = ("Segoe UI", 10)
+from secure_key import (
+    _TOKEN_SVC,  # noqa: WPS437 – internal consts are fine in same repo
+)
+if os.name == "nt":
+    from secure_key import _cache_path  # type: ignore
 
+from constants import TOKEN_KEYS  # list[str] | list[tuple[str,str]]
+
+# ───────────────────────── tokens / colours ──────────────────────────
+TITLE = "Secure-Key Setup"
+ICON_B64 = (
+    "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAThJREFU"
+    "SEvtVD1KxEAU/jJipwdYJPkGvIB4Ai0stLS1Eay9g95DsLPcTiws9AZ7ATF5E1isBRtZ9smE"
+    "ZMmuWZMBk2qnGphv3vfz3kyEnlfUc31sCFoTHj4iklcA7lakXYjIQ6vcBsCSA5LfALabCqnq"
+    "zDnXePYX8YKA5AzAlgcbY2yapuL3cRzvG2PeyiJfIrIT4qQgsNZequq934tIY19IatfCqnr"
+    "rnLvx+KJYdXk+n+/leT611h6p6ksBiKLjLMterbUHqjoJJVkiqNSvql3nqomM5BmAR3/mnfw"
+    "LAclTEXkq01hPEBjRREQOSU4BjAC8A7iuq/d9GKbJpbWgMSX5CWAXwIeIjCon9QlaTFHVrNC"
+    "HRvJcRMbV/SRJTpxzz/Xm/5r5Xr+KrjMeghv+Nw1R1wW7cdCa0g9vCLvNhFGZKQAAAABJRU5E"
+    "rkJggg=="
+)
+PRIMARY, PRIMARY_HOV, PRIMARY_PRS = "#1976D2", "#1565C0", "#0D47A1"
+BG_WINDOW, FG_LABEL, FG_TEXT = "#F4F6F8", "#5F6368", "#202124"
+FONT_UI = ("Segoe UI", 10)
+
+# ─────────────────────────── GUI class ───────────────────────────────
 class SetupGUI(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        # — window
+        # window basics
         self.title(TITLE)
         self.iconphoto(True, tk.PhotoImage(data=ICON_B64))
         self.configure(background=BG_WINDOW)
         self.resizable(False, False)
 
-        # — global style ---------------------------------------------------
+        # global ttk style
         style = ttk.Style(self)
         style.theme_use("clam")
         style.configure(".", font=FONT_UI, background=BG_WINDOW)
         style.configure("TLabel", foreground=FG_LABEL, background=BG_WINDOW)
-        style.configure("Flat.TEntry",
-                        relief="flat", padding=4,
-                        fieldbackground="white", foreground=FG_TEXT)
-        style.configure("Primary.TButton",
-                        foreground="white", background=PRIMARY,
-                        padding=(14, 6), borderwidth=0)
-        style.map("Primary.TButton",
-                  background=[("active", PRIMARY_HOV),
-                              ("pressed", PRIMARY_PRS)])
+        style.configure(
+            "Flat.TEntry",
+            relief="flat",
+            padding=4,
+            fieldbackground="white",
+            foreground=FG_TEXT,
+        )
+        style.configure(
+            "Primary.TButton",
+            foreground="white",
+            background=PRIMARY,
+            padding=(14, 6),
+            borderwidth=0,
+        )
+        style.map(
+            "Primary.TButton",
+            background=[("active", PRIMARY_HOV), ("pressed", PRIMARY_PRS)],
+        )
 
-        # — card frame ------------------------------------------------------
+        # card frame
         card = ttk.Frame(self, padding=24)
         card.grid()
         card.columnconfigure(1, weight=1)
 
         self.inputs: dict[str, ttk.Entry] = {}
 
-        # ---------- token fields ------------------------------------------
+        # ---------- token fields --------------------------------------
         for row, item in enumerate(TOKEN_KEYS):
-            # accept either "OPENAI_API_KEY" or ("OPENAI_API_KEY", "OpenAI key")
-            if isinstance(item, tuple):
-                key, label = item
-            else:
-                key   = item
-                label = key.replace("_API_KEY", "").replace("_", " ").title() + " API key"
-
+            key, label = (
+                item if isinstance(item, tuple) else (item, item.replace("_API_KEY", "").replace("_", " ").title() + " API key")
+            )
             ttk.Label(card, text=label + ":").grid(
                 row=row, column=0, sticky="e", padx=(0, 12), pady=4
             )
-            ent = ttk.Entry(card, width=38,
-                            show="*" if "KEY" in key else "",
-                            style="Flat.TEntry")
+            ent = ttk.Entry(
+                card,
+                width=38,
+                show="*" if "KEY" in key else "",
+                style="Flat.TEntry",
+            )
             ent.grid(row=row, column=1, pady=4, sticky="ew")
             self.inputs[key] = ent
 
-        # ---------- pass-phrase -------------------------------------------
-        last = len(TOKEN_KEYS)
+        cur_row = len(TOKEN_KEYS)
+
+        # ---------- engine selector -----------------------------------
+        ttk.Label(card, text="Crypto engine:").grid(
+            row=cur_row, column=0, sticky="e", padx=(0, 12), pady=(12, 4)
+        )
+        self.engine_box = ttk.Combobox(
+            card,
+            values=list(ENGINES.keys()),
+            state="readonly",
+            width=35,
+        )
+        self.engine_box.set(DEFAULT_ENGINE)
+        self.engine_box.grid(row=cur_row, column=1, pady=(12, 4), sticky="ew")
+        cur_row += 1
+
+        # ---------- TTL ----------------------------------------------
+        ttk.Label(card, text="Cache TTL (sec):").grid(
+            row=cur_row, column=0, sticky="e", padx=(0, 12), pady=4
+        )
+        self.ttl_entry = ttk.Entry(card, width=38, style="Flat.TEntry")
+        self.ttl_entry.insert(0, "900")
+        self.ttl_entry.grid(row=cur_row, column=1, pady=4, sticky="ew")
+        cur_row += 1
+
+        # ---------- pass-phrase --------------------------------------
         ttk.Label(card, text="Pass-phrase:").grid(
-            row=last, column=0, sticky="e", padx=(0, 12), pady=(12, 4)
+            row=cur_row, column=0, sticky="e", padx=(0, 12), pady=(12, 4)
         )
         self.pass_entry = ttk.Entry(card, width=38, show="*", style="Flat.TEntry")
-        self.pass_entry.grid(row=last, column=1, pady=(12, 4), sticky="ew")
+        self.pass_entry.grid(row=cur_row, column=1, pady=(12, 4), sticky="ew")
+        cur_row += 1
 
-        # ---------- action buttons ----------------------------------------
-        btn_row = last + 1
-        save_btn = ttk.Button(card, text="Save", style="Primary.TButton",
-                              command=self.save)
-        save_btn.grid(row=btn_row, column=0, sticky="ew", pady=(16, 4))
+        # ---------- action buttons -----------------------------------
+        save_btn = ttk.Button(
+            card, text="Save", style="Primary.TButton", command=self.save
+        )
+        save_btn.grid(row=cur_row, column=0, sticky="ew", pady=(16, 4))
 
-        clear_btn = ttk.Button(card, text="Clear cache",
-                               command=self.clear_cache)
-        clear_btn.grid(row=btn_row, column=1, sticky="ew", pady=(16, 4))
+        clear_btn = ttk.Button(card, text="Clear cache", command=self.clear_cache)
+        clear_btn.grid(row=cur_row, column=1, sticky="ew", pady=(16, 4))
+        cur_row += 1
 
-        # ---------- inline status banner ----------------------------------
+        # ---------- status banner ------------------------------------
         self.status_lbl = ttk.Label(card, text="", anchor="center")
-        self.status_lbl.grid(row=btn_row + 1, column=0, columnspan=2,
-                             sticky="ew", pady=(4, 2))
+        self.status_lbl.grid(row=cur_row, column=0, columnspan=2, sticky="ew", pady=(4, 2))
 
         self.update_idletasks()
         self.minsize(self.winfo_width(), self.winfo_height())
 
-    # ──────────────────  save secrets  ────────────────────────────
+    # ───────────────────── save secrets ────────────────────────────
     def save(self) -> None:
         phrase = self.pass_entry.get().strip()
         if not phrase:
             self._status("Pass-phrase cannot be empty.", "red")
+            return
+
+        try:
+            ttl = int(self.ttl_entry.get())
+            if ttl < 0:
+                raise ValueError
+        except ValueError:
+            self._status("TTL must be a non-negative integer.", "red")
+            return
+
+        engine = self.engine_box.get()
+        if engine not in ENGINES:
+            self._status("Invalid engine selected.", "red")
             return
 
         saved = 0
@@ -111,8 +179,8 @@ class SetupGUI(tk.Tk):
             if not val:
                 continue
             ns = _provider_service(key)
-            keyring.set_password(ns, key, _encrypt(val, phrase))
-            _cache_passphrase(ns, phrase)
+            keyring.set_password(ns, key, _encrypt(val, phrase, engine))
+            _cache_passphrase(ns, phrase, ttl)
             saved += 1
 
         if saved:
@@ -120,30 +188,37 @@ class SetupGUI(tk.Tk):
         else:
             self._status("No values entered.", "orange")
 
-    # ──────────────────  clear cache  ────────────────────────────
+    # ───────────────────── clear cache ─────────────────────────────
     def clear_cache(self) -> None:
         deleted = 0
         for item in TOKEN_KEYS:
             key = item[0] if isinstance(item, tuple) else item
-            ns  = _provider_service(key)
+            ns = _provider_service(key)
+            # delete ciphertext
             try:
                 keyring.delete_password(ns, key)
                 deleted += 1
             except PasswordDeleteError:
-                pass    # not present – ignore
-            _cache_passphrase(ns, None)   # clear cached passphrase
+                pass
+            # delete pass-phrase cache
+            if os.name == "nt":
+                _cache_path(ns).unlink(missing_ok=True)
+            else:
+                try:
+                    keyring.delete_password(_TOKEN_SVC, f"{ns}/_shared")
+                except PasswordDeleteError:
+                    pass
+        self._status(
+            f"{'🗑  Cleared' if deleted else 'Nothing to clear.'}", "green" if deleted else "orange"
+        )
+        for ent in self.inputs.values():
+            ent.delete(0, tk.END)
 
-        if deleted:
-            self._status(f"🗑  Cleared {deleted} key(s).", "green")
-            for ent in self.inputs.values():
-                ent.delete(0, tk.END)
-        else:
-            self._status("Nothing to clear.", "orange")
-
-    # ──────────────────  helper  ─────────────────────────────────
+    # ───────────────────── helper ────────────────────────────────
     def _status(self, msg: str, color: str) -> None:
         self.status_lbl.configure(text=msg, foreground=color)
 
-# ────────────────────────────────────────────────────────────────
+
+# ─────────────────────────── run as script ───────────────────────────
 if __name__ == "__main__":
     SetupGUI().mainloop()
