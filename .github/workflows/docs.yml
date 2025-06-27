@@ -39,6 +39,7 @@ jobs:
 
       # Install MkDocs + theme
       - run: pip install mkdocs-material
+             pip install mkdocs-video==1.5.0
 
       # Build site & push to gh-pages
       - run: mkdocs gh-deploy --force --clean   # --clean wipes stale files
