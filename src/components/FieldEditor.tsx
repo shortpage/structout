@@ -100,6 +100,7 @@ interface Props {
   metadataName: string;
   metadataDesc?: string;
   isReadOnlyMetadata?: boolean;
+  readOnly?: boolean;
 }
 
 /* ================================================================ */
@@ -110,6 +111,7 @@ const FieldEditor: React.FC<Props> = ({
   actualViewMode,
   metadataName,
   metadataDesc = "",
+  readOnly = false,
 }) => {
   /* validation flags for metadata ----------------------------------- */
   const [metaErr, setMetaErr] = useState(false);
@@ -134,7 +136,7 @@ const FieldEditor: React.FC<Props> = ({
     !!metadataName.trim() && !!metadataDesc.trim() && !metaErr && !descErr;
 
   const addRoot = useCallback(() => {
-    if (!rootRowAllowed || !canAddRoot) return;
+    if (readOnly || !rootRowAllowed || !canAddRoot) return;
     onChangeFields([
       ...fields,
       {
@@ -158,10 +160,11 @@ const FieldEditor: React.FC<Props> = ({
         excludefromRagDefinition: false,
       },
     ]);
-  }, [canAddRoot, fields, onChangeFields, rootRowAllowed]);
+  }, [readOnly, canAddRoot, fields, onChangeFields, rootRowAllowed]);
 
   const addChild = useCallback(
     (i: number) => {
+      if (readOnly) return;
       const p = fields[i];
       if (!p || p.locked) return;
       if (p.type !== "object" && p.type !== "array-object") return;
@@ -198,44 +201,52 @@ const FieldEditor: React.FC<Props> = ({
       arr.splice(at, 0, child);
       onChangeFields(arr);
     },
-    [fields, onChangeFields],
+    [readOnly, fields, onChangeFields],
   );
 
   const delRow = useCallback(
-    (i: number) =>
-      fields.length > 1 && onChangeFields(fields.filter((_, x) => x !== i)),
-    [fields, onChangeFields],
+    (i: number) => {
+      // 🔒 demo-mode guard
+      if (readOnly) return;
+      // keep at least one row alive
+      if (fields.length <= 1) return;
+      onChangeFields(fields.filter((_, x) => x !== i));
+    },
+    [readOnly, fields, onChangeFields],
   );
 
   const moveUp = useCallback(
     (i: number) => {
+      if (readOnly) return;
       if (i === 0) return;
       if (fields[i - 1].level !== fields[i].level) return;
       const a = [...fields];
       [a[i - 1], a[i]] = [a[i], a[i - 1]];
       onChangeFields(a);
     },
-    [fields, onChangeFields],
+    [readOnly, fields, onChangeFields],
   );
 
   const moveDn = useCallback(
     (i: number) => {
+      if (readOnly) return;
       if (i >= fields.length - 1) return;
       if (fields[i + 1].level !== fields[i].level) return;
       const a = [...fields];
       [a[i], a[i + 1]] = [a[i + 1], a[i]];
       onChangeFields(a);
     },
-    [fields, onChangeFields],
+    [readOnly, fields, onChangeFields],
   );
 
   const togLock = useCallback(
     (i: number) => {
+      if (readOnly) return;
       const a = [...fields];
       a[i].locked = !a[i].locked;
       onChangeFields(a);
     },
-    [fields, onChangeFields],
+    [readOnly, fields, onChangeFields],
   );
 
   /* ---------- column definitions (memoised) ----------------------- */
@@ -260,8 +271,8 @@ const FieldEditor: React.FC<Props> = ({
                 <span>
                   <IconButton
                     size="small"
-                    disabled={isFirstUp}
-                    onClick={() => moveUp(i)}
+                    disabled={readOnly || isFirstUp}
+                    onClick={() => !readOnly && moveUp(i)}
                   >
                     <FaArrowUp style={{ fontSize: ICON_SIZE }} />
                   </IconButton>
@@ -271,8 +282,8 @@ const FieldEditor: React.FC<Props> = ({
                 <span>
                   <IconButton
                     size="small"
-                    disabled={isLastDown}
-                    onClick={() => moveDn(i)}
+                    disabled={readOnly || isLastDown}
+                    onClick={() => !readOnly && moveDn(i)}
                   >
                     <FaArrowDown style={{ fontSize: ICON_SIZE }} />
                   </IconButton>
@@ -323,7 +334,11 @@ const FieldEditor: React.FC<Props> = ({
               {isObj && (
                 <Tooltip title={f.locked ? "Unlock" : "Lock"}>
                   <span>
-                    <IconButton size="small" onClick={() => togLock(i)}>
+                    <IconButton
+                      size="small"
+                      onClick={() => !readOnly && togLock(i)}
+                      disabled={readOnly}
+                    >
                       {f.locked ? (
                         <FaLock style={{ fontSize: ICON_SIZE }} />
                       ) : (
@@ -338,8 +353,8 @@ const FieldEditor: React.FC<Props> = ({
                   <span>
                     <IconButton
                       size="small"
-                      onClick={() => !f.locked && addChild(i)}
-                      disabled={f.locked}
+                      onClick={() => !readOnly && !f.locked && addChild(i)}
+                      disabled={readOnly || f.locked}
                     >
                       <FaPlus style={{ fontSize: ICON_SIZE }} />
                     </IconButton>
@@ -357,6 +372,7 @@ const FieldEditor: React.FC<Props> = ({
                       setPrompt(f.aiPrompt);
                       setOpen(true);
                     }}
+                    data-tour={i === 0 ? "field-edit" : undefined}
                   >
                     <EditIcon sx={{ fontSize: ICON_SIZE }} />
                   </IconButton>
@@ -364,7 +380,11 @@ const FieldEditor: React.FC<Props> = ({
               </Tooltip>
               <Tooltip title="Delete">
                 <span>
-                  <IconButton size="small" onClick={() => delRow(i)}>
+                  <IconButton
+                    size="small"
+                    disabled={readOnly || fields.length <= 1}
+                    onClick={() => !readOnly && delRow(i)}
+                  >
                     <FaTrashAlt style={{ fontSize: ICON_SIZE }} />
                   </IconButton>
                 </span>
@@ -374,7 +394,7 @@ const FieldEditor: React.FC<Props> = ({
         },
       },
     ],
-    [fields, moveUp, moveDn, togLock, addChild, delRow],
+    [readOnly, fields, moveUp, moveDn, togLock, addChild, delRow],
   );
 
   /* --------------------------- render ------------------------------- */
@@ -409,8 +429,8 @@ const FieldEditor: React.FC<Props> = ({
               >
                 <span>
                   <IconButton
-                    onClick={addRoot}
-                    disabled={!canAddRoot}
+                    onClick={() => !readOnly && addRoot()}
+                    disabled={readOnly || !canAddRoot}
                     sx={{ transform: "translateY(6px)" }}
                   >
                     <FaPlus />
@@ -447,6 +467,7 @@ const FieldEditor: React.FC<Props> = ({
               setEKey(v);
               setEditErr(unsafe(v) ? "Disallowed text" : "");
             }}
+            disabled={readOnly}
           />
           <TextField
             variant="standard"
@@ -454,6 +475,7 @@ const FieldEditor: React.FC<Props> = ({
             label="Type"
             value={eType}
             onChange={(e) => setEType(e.target.value)}
+            disabled={readOnly}
           >
             {selectOptions.map((o) => (
               <MenuItem key={o.value} value={o.value}>
@@ -468,14 +490,18 @@ const FieldEditor: React.FC<Props> = ({
             rows={2}
             value={ePrompt}
             onChange={(e) => setPrompt(e.target.value)}
+            disabled={readOnly}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={() => setOpen(false)} data-tour="dialog-cancel">
+            Cancel
+          </Button>
           <Button
             variant="contained"
-            disabled={!!editErr}
+            disabled={readOnly || !!editErr}
             onClick={() => {
+              if (readOnly) return;
               if (idx == null) return;
               const arr = [...fields];
               arr[idx].key = toCamel(eKey.trim());

@@ -259,6 +259,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
             value={llmProvider}
             label="Provider"
             onChange={(e) => onProviderChange(e.target.value as ProviderId)}
+            id="provider-select"
           >
             {PROVIDERS.map((p) => (
               <MenuItem key={p} value={p}>
@@ -279,6 +280,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
             value={safeModelKey}
             label="Model"
             onChange={(e) => setModelKey(e.target.value as ModelKey)}
+            id="model-select"
           >
             {Object.keys(PROVIDER_META[llmProvider].models).map((k) => (
               <MenuItem key={k} value={k}>
@@ -309,6 +311,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
               disabled={!jsonSchema}
               onClick={download}
               sx={{ ml: 0.5 }}
+              id="btn-download"
             >
               <DownloadIcon fontSize="inherit" />
             </IconButton>
@@ -350,6 +353,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
         <Link
           component="button"
           fontSize={13}
+          id="link-helpers"
           underline={view.startsWith("helper") ? "always" : "hover"}
           onClick={() => showHelpers("model")}
         >
@@ -374,6 +378,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
               sx={{ ml: 0.5 }}
               color="text.secondary"
               underline={view === "helper:main" ? "always" : "hover"}
+              id="link-helper-main"
               onClick={() => showHelpers("main")}
             >
               main

@@ -46,6 +46,7 @@
  * -------------------------------------------------------------- */
 
 import React, { useRef, useState, useEffect } from "react";
+import { DEMO_READ_ONLY, SHOW_TOUR } from "./lib/constants";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import Snackbar from "@mui/material/Snackbar";
@@ -61,6 +62,7 @@ import SectionHeader from "./components/SectionHeader";
 import LegalLinks from "./components/LegalLinks";
 import { loadProviderConfig } from "./utils/loadProviderConfig";
 import { EXAMPLES } from "./lib/exampleLoader";
+import DemoTour from "./components/DemoTour";
 
 import {
   Root,
@@ -193,6 +195,7 @@ const Workbench: React.FC = () => {
                 ref={designerRef}
                 headerRule={headerRule}
                 onJsonSchemaGenerated={setJsonSchema}
+                readOnly={DEMO_READ_ONLY}
               />
             </ScrollArea>
           </DesignerCol>
@@ -206,6 +209,8 @@ const Workbench: React.FC = () => {
               schemaId={schemaId}
             />
           </SchemaCol>
+          {/* Joyride tour appears only in the read-only demo build */}
+          {DEMO_READ_ONLY && SHOW_TOUR && <DemoTour />}
         </Frame>
 
         {/* footer & snackbar remain unchanged … */}

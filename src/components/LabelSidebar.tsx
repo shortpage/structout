@@ -159,7 +159,11 @@ const LabelSidebar: React.FC<LabelSidebarProps> = ({ onSelectTemplate }) => {
 
         {/* ───────── Examples (optional) ───────── */}
         {EXAMPLE_ENABLED && (
-          <SpacedTreeItem itemId="examples" label={<>{FolderI}Examples</>}>
+          <SpacedTreeItem
+            itemId="examples"
+            label={<>{FolderI}Examples</>}
+            data-tour="sidebar-examples"
+          >
             {exampleIds.length === 0 ? (
               <SpacedTreeItem itemId="examples-empty" label="(none)" disabled />
             ) : (
@@ -168,6 +172,11 @@ const LabelSidebar: React.FC<LabelSidebarProps> = ({ onSelectTemplate }) => {
                   key={ex}
                   itemId={`ex-${ex}`}
                   label={ex}
+                  data-tour={
+                    ex.toLowerCase() === "chocolatebrownies"
+                      ? "sidebar-ex-chocolatebrownies" /* ← Joyride clicks here */
+                      : undefined
+                  }
                   onClick={handleExClick(ex)}
                 />
               ))

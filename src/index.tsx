@@ -32,6 +32,8 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 
+console.info("DEMO_READ_ONLY =", import.meta.env.VITE_DEMO_READ_ONLY);
+
 /* Root element is guaranteed by Vite’s index.html template.          */
 
 const container = document.getElementById("root")!;

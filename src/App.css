@@ -69,3 +69,23 @@
 .read-the-docs {
   color: #888;
 }
+
+.tour-demo-btn {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  border: none;
+  background: #e53935;     /* red */
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 120ms;
+}
+
+.tour-demo-btn:hover {
+  transform: scale(1.05);
+}

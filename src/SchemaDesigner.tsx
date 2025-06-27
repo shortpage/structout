@@ -122,6 +122,7 @@ interface Props {
   headerRule: string;
   /** Emits freshly generated JSON Schema. */
   onJsonSchemaGenerated: (s: string) => void;
+  readOnly?: boolean;
 }
 
 /* ============================================================== */
@@ -137,6 +138,7 @@ interface HeaderBarProps {
   hasSaved: boolean;
   onDelete: () => void;
   onNew: () => void;
+  readOnly: boolean;
 }
 const HeaderBar: React.FC<HeaderBarProps> = ({
   metaName,
@@ -149,6 +151,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   hasSaved,
   onDelete,
   onNew,
+  readOnly,
 }) => (
   <Box
     sx={{
@@ -163,15 +166,19 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
       variant="standard"
       label="ID"
       sx={{ minWidth: 180 }}
+      id="meta-id"
       value={metaName}
       onChange={(e) => onMetaName(e.target.value)}
+      disabled={readOnly}
     />
     <TextField
       variant="standard"
       label="Description"
       sx={{ flex: 1, minWidth: 240, "& input": { fontSize: 13 } }}
+      id="meta-desc"
       value={metaDesc}
       onChange={(e) => onMetaDesc(e.target.value)}
+      disabled={readOnly}
       slotProps={{
         // <-- new home for “inner-element” props
         htmlInput: {
@@ -187,6 +194,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
         startIcon={<AddCircleOutlineIcon fontSize="small" />}
         sx={{ textTransform: "none", fontSize: 13 }}
         onClick={onNew}
+        disabled={readOnly}
       >
         New
       </Button>
@@ -234,7 +242,8 @@ const FieldTable: React.FC<{
   onChangeFields: (f: SchemaField[]) => void;
   metaName: string;
   metaDesc: string;
-}> = ({ fields, onChangeFields, metaName, metaDesc }) => (
+  readOnly: boolean;
+}> = ({ fields, onChangeFields, metaName, metaDesc,  readOnly }) => (
   <Box sx={{ flex: 1, overflow: "auto" }}>
     <FieldEditor
       fields={fields}
@@ -243,6 +252,7 @@ const FieldTable: React.FC<{
       actualViewMode="Structure"
       metadataName={metaName}
       metadataDesc={metaDesc}
+      readOnly={readOnly}
     />
   </Box>
 );
@@ -250,7 +260,7 @@ const FieldTable: React.FC<{
 /* ============================================================== */
 // eslint-disable-next-line react/display-name
 const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
-  ({ headerRule, onJsonSchemaGenerated }, ref) => {
+  ({ headerRule, onJsonSchemaGenerated, readOnly = false }, ref) => {
     /* ---------------- state ----------------------------------- */
     const [fields, setFields] = useState<SchemaField[]>([]);
     const [metaName, setMetaName] = useState("");
@@ -358,7 +368,7 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
     };
 
     const doSave = () => {
-      if (!canSave) return;
+      if (readOnly || !canSave) return;
 
       const newKey = `schema_metadata_${metaName.trim()}`; // 🔄
       const payload = JSON.stringify({
@@ -400,6 +410,7 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
     };
 
     const confirmDelete = () => {
+      if (readOnly) return;
       try {
         localStorage.removeItem(keyLocal);
       } catch (e) {
@@ -437,12 +448,13 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
                   metaDesc={metaDesc}
                   onMetaName={(v) => setMetaName(isLegalId(v) ? v : toCamel(v))}
                   onMetaDesc={setMetaDesc}
-                  canSave={!!canSave}
+                  canSave={!readOnly && !!canSave}
                   saved={saved}
-                  onSave={() => setShowLocalDlg(true)}
-                  hasSaved={hasSaved}
+                  onSave={() => !readOnly && setShowLocalDlg(true)}
+                  hasSaved={!readOnly && hasSaved}
                   onDelete={() => setConfirm(true)}
-                  onNew={newSchema}
+                  onNew={() => !readOnly && newSchema()}
+                  readOnly={readOnly}
                 />
 
                 <FieldTable
@@ -450,6 +462,7 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
                   onChangeFields={setFields}
                   metaName={metaName}
                   metaDesc={metaDesc}
+                  readOnly={readOnly}
                 />
               </EditorCol>
             </Box>
