@@ -243,7 +243,7 @@ const FieldTable: React.FC<{
   metaName: string;
   metaDesc: string;
   readOnly: boolean;
-}> = ({ fields, onChangeFields, metaName, metaDesc,  readOnly }) => (
+}> = ({ fields, onChangeFields, metaName, metaDesc, readOnly }) => (
   <Box sx={{ flex: 1, overflow: "auto" }}>
     <FieldEditor
       fields={fields}
