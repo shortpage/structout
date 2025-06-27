@@ -63,7 +63,7 @@
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.33.1",
     "@typescript-eslint/parser": "^8.34.0",
-    "@vitejs/plugin-react": "^4.5.1",
+    "@vitejs/plugin-react": "^4.6.0",
     "@vitest/ui": "^3.2.2",
     "depcheck": "^1.4.7",
     "eslint": "^9.28.0",
@@ -81,10 +81,14 @@
     "typedoc": "^0.28.5",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
+    "vite-tsconfig-paths": "^4.3.0",
     "vitest": "^3.2.2"
   },
   "overrides": {
-    "prismjs": "^1.29.0"
+    "prismjs": "^1.29.0",
+    "glob": "^10.3.10",
+    "whatwg-url/abab": "^3.0.0",
+    "whatwg-url/domexception": "^5.0.0"
   },
   "pnpm": {
     "overrides": {

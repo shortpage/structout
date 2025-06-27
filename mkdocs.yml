@@ -15,6 +15,10 @@ nav:
       - Installation: installation.md
       - Quick Start: quick-start.md
 
+  - Visual Designer:
+      - Using the Designer: visualdesigner.md
+      - Illustrations: visualdesigner_illustration.md
+
   - LLM Providers:
       - Overview: llm-providers/index.md
       - Adapters:
@@ -124,3 +128,6 @@ markdown_extensions:
 
 plugins:
   - search
+  - mkdocs-video:   # add the new one
+      is_video: true        # use <video> instead of <iframe>
+      video_controls: true  # show play bar (default)

@@ -1,32 +1,16 @@
 /* ------------------------------------------------------------------
  * MIT License
  * Copyright (c) 2025  Sesh Ragavachari
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the “Software”), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify,
- * merge, publish, distribute, sublicense, and/or sell copies of the
- * Software, and to permit persons to whom the Software is furnished
- * to do so, subject to the following conditions:
- *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
  * ------------------------------------------------------------------
  * File   : bundleHelpers.ts
  * Author : Sesh Ragavachari
- * Version: 1.0
+ * Version: 2.0  (2025-06-26)
  * ------------------------------------------------------------------
  *  Assemble a **zip archive** that ships everything a user needs:
  *    • Pydantic model + demo driver (per provider & model)
- *    • Provider-specific JSON Schemas (now honour schemaExclude)
+ *    • Provider-specific JSON Schemas (honours schemaExclude)
  *    • Input / output folders ready for prompts & results
+ *    • requirements.txt generated from plain-text scaffold files
  * ------------------------------------------------------------------ */
 
 import JSZip from "jszip";
@@ -34,6 +18,11 @@ import secureKeyPy from "../scaffolds/secure_key_py.txt?raw";
 import secureKeyGuiPy from "../scaffolds/secure_key_gui_py.txt?raw";
 import secureKeyConstPy from "../scaffolds/constants_py.txt?raw";
 import exampleMap from "../examples/exampleManifest.json" assert { type: "json" };
+import baseReq from "../scaffolds/requirements/base.txt?raw";
+import openaiReq from "../scaffolds/requirements/openai.txt?raw";
+import anthropicReq from "../scaffolds/requirements/anthropic.txt?raw";
+import googleReq from "../scaffolds/requirements/google.txt?raw";
+import llamaReq from "../scaffolds/requirements/llama.txt?raw";
 
 import { generateHelperFiles } from "./ideHelperGenerator";
 import {
@@ -46,24 +35,16 @@ import jsonSchemaGenerator, {
   SchemaField,
 } from "../components/jsonSchemaGenerator";
 
-/* ------------------------------------------------------------------
- * Append common helper files (secure-key + GUI) to the bundle
- * ------------------------------------------------------------------ */
-function addHelperFiles(dir: JSZip): void {
-  dir.file("secure_key.py", secureKeyPy);
-  dir.file("secure_key_gui.py", secureKeyGuiPy);
-  dir.file("constants.py", secureKeyConstPy);
-}
+export const reqCatalogue: Record<string, string> = {
+  base: baseReq,
+  openai: openaiReq,
+  anthropic: anthropicReq,
+  google: googleReq,
+  llama: llamaReq,
+};
 
-function addExampleFromManifest(dir: JSZip, schemaId: string): void {
-  const txt = (exampleMap as Record<string, string>)[schemaId];
-  if (!txt) return;
+/* ───────────────────────────── helper utilities ───────────────────────────── */
 
-  const inputDir = dir.folder("input")!; // idempotent
-  inputDir.file(`${schemaId}_content.txt`, txt);
-}
-
-/* --------------------------- helpers --------------------------- */
 const safePy = (s: string) =>
   (/^[A-Za-z_]/.test(s) ? s : `_${s}`).replace(/[^0-9A-Za-z_]/g, "_");
 
@@ -105,19 +86,18 @@ const stripWrappers = (node: unknown): unknown => {
   return cur;
 };
 
-/* ------------------------------------------------------------------
- *                              main API
- * ------------------------------------------------------------------ */
+/* ─────────────────────────────────── main API ─────────────────────────────────── */
+
 export async function buildZipBundle(
   rawSchemaJson: string,
   _provider?: ProviderId,
   _exampleName?: string,
   overrideId?: string,
 ): Promise<{ blob: Blob; id: string }> {
-  /* ── 0. parse designer JSON ─────────────────────────────────── */
+  /* 0 ─ parse designer JSON */
   const rootObj = JSON.parse(rawSchemaJson);
 
-  /* ── 1. choose schemaId ─────────────────────────────────────── */
+  /* 1 ─ choose schemaId */
   let rawId = rootObj.metadataName || rootObj.title || rootObj.name || "schema";
   if (!overrideId) {
     const meta = loadStoredMeta(safePy(rawId));
@@ -128,10 +108,10 @@ export async function buildZipBundle(
   const schemaId = safePy(rawId);
   const bundleId = `${schemaId}_api`;
 
-  /* ── 2. load saved field list (if any) ──────────────────────── */
+  /* 2 ─ load saved field list (if any) */
   const fields = loadFieldsForId(schemaId);
 
-  /* ── 3. build ZIP structure ─────────────────────────────────── */
+  /* 3 ─ build ZIP structure */
   const zip = new JSZip();
   const rootFolder = zip.folder(bundleId)!;
 
@@ -156,10 +136,12 @@ export async function buildZipBundle(
   }
 
   /* —— provider-specific bundles —— */
+  const usedProviders = new Set<ProviderId>();
+
   for (const provider of PROVIDERS) {
     const pFolder = rootFolder.folder(provider)!;
     const headerRule = await PROVIDER_META[provider].getHeaderRule();
-    const schemaExcl = await PROVIDER_META[provider].getSchemaExclude?.(); // ← CHANGED
+    const schemaExcl = await PROVIDER_META[provider].getSchemaExclude?.();
 
     const providerSchemaObj = fields
       ? jsonSchemaGenerator({
@@ -167,14 +149,14 @@ export async function buildZipBundle(
           name: schemaId,
           description: rootObj.description ?? `Schema for ${schemaId}`,
           headerRule,
-          schemaExclude: schemaExcl, // ← CHANGED
+          schemaExclude: schemaExcl,
         })
       : jsonSchemaGenerator({
           baseSchema: stripWrappers(rootObj) as Record<string, unknown>,
           name: schemaId,
           description: rootObj.description ?? `Schema for ${schemaId}`,
           headerRule,
-          schemaExclude: schemaExcl, // ← CHANGED
+          schemaExclude: schemaExcl,
         });
 
     pFolder.file(
@@ -192,13 +174,39 @@ export async function buildZipBundle(
       );
       pFolder.file(`${schemaId}_${modelKey}_main.py`, mainCode);
     }
+
+    usedProviders.add(provider);
   }
 
   /* —— shared helper scripts & examples —— */
   addHelperFiles(rootFolder);
   addExampleFromManifest(rootFolder, schemaId);
 
-  /* ── 4. generate & return blob ───────────────────────────────── */
+  /* —— requirements.txt —— */
+  const lines = new Set<string>(reqCatalogue.base?.trim().split(/\r?\n/) ?? []);
+  for (const p of usedProviders) {
+    reqCatalogue[p]
+      ?.trim()
+      .split(/\r?\n/)
+      .forEach((l) => lines.add(l));
+  }
+  rootFolder.file("requirements.txt", [...lines].join("\n") + "\n");
+
+  /* 4 ─ generate & return blob */
   const blob = await zip.generateAsync({ type: "blob" });
   return { blob, id: bundleId };
+}
+
+/* ───────────────────────────── helper add-ins ───────────────────────────── */
+
+function addHelperFiles(dir: JSZip): void {
+  dir.file("secure_key.py", secureKeyPy);
+  dir.file("secure_key_gui.py", secureKeyGuiPy);
+  dir.file("constants.py", secureKeyConstPy);
+}
+
+function addExampleFromManifest(dir: JSZip, schemaId: string): void {
+  const txt = (exampleMap as Record<string, string>)[schemaId];
+  if (!txt) return;
+  dir.folder("input")!.file(`${schemaId}_content.txt`, txt);
 }
