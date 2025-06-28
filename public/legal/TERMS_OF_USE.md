@@ -1,7 +1,7 @@
 # Terms of Use
 
 1. **License**  
-   The software is distributed under the MIT License located at the project root.
+   The software is distributed under the [MIT License](https://github.com/shortpage/structout/blob/main/LICENSES/LICENSE) located at the project root.
 
 2. **No warranty**  
    The App is provided “AS IS” without warranty of any kind. You bear the entire risk as to its quality and performance.

@@ -85,7 +85,7 @@ export default function LegalLinks(): React.JSX.Element {
         </button>
         <a
           className="link-button"
-          href="https://github.com/shortpage/structout/blob/main/LICENSE"
+          href="https://github.com/shortpage/structout/blob/main/LICENSES/LICENSE"
           target="_blank"
           rel="noreferrer"
         >
@@ -118,7 +118,7 @@ export default function LegalLinks(): React.JSX.Element {
           background: none;
           border: none;
           padding: 0;
-          font-size: 0.75rem;
+          font-size: 1rem;
           cursor: pointer;
           color: var(--accent-color, #1d70fe);
         }
