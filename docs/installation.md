@@ -1,6 +1,6 @@
 # Quick Start
 
-> Three options to get up-and-running. Choose what fits your workflow.
+> Two options to get up-and-running. Choose what fits your workflow.
 
 ---
 
@@ -44,32 +44,16 @@ pnpm tauri build  # generates .msi
 
 ---
 
-## Option 2: Hosted (zero-install)
+## Option 2: Hosted Demo (readonly)
 
 > Fastest path—no tooling, no downloads.
 
-
-1. **Open StructOut**  
+1. **Open StructOut Demo**  
    <https://ai.structout.dev>
 
-2. **Start designing**  
-   Everything runs in the browser. Your schema and settings persist across sessions.
-
+2. **Explore the interface**  
+   Everything runs in the browser as a readonly demonstration. You can view examples and explore features without making changes.
 
 Choose this path when you want to **evaluate StructOut quickly** or demo it without touching a terminal.
 
 ---
-
----
-
-## Option 3: Microsoft Store (App)
-
-> Ideal for locked-down machines that forbid Node/npm.
-
-
-1. _One-click install_ → [Get StructOut in Microsoft Store](ms-windows-store://pdp/?productid=9N123EXAMPLE)  
-   *(If that link doesn’t open the Store app, just search “StructOut” — publisher: **StructOut**.)*
-2. Click **Install**.
-3. Launch from the **Start menu**.
-
-
