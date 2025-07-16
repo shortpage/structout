@@ -1,224 +1,599 @@
 #!/usr/bin/env python3
 """
-secure_key_gui.py – modern flat-style GUI for secure_key.py (v2)
-Tkinter + ttk only, no extra deps.
+secure_key_gui.py — graphical helper for secure_key.py   (2025-07-16)
+
+• Global or per-namespace passphrase support with persistent mode
+• Mode is stored in keyring and locked after first save
+• Passphrase change/rotation with inline UI (no popups)
+• No caching during save - only when client code runs
+• Dynamic UI based on stored mode
+• Persistent cache TTL and default engine stored in keyring
+• Independent configuration saving
+• Locks engine selection after mode is locked
 """
 
 from __future__ import annotations
-import os
-import tkinter as tk
-from tkinter import ttk
-
+import base64, io, sys, contextlib, tkinter as tk
+from tkinter import ttk, simpledialog
 import keyring
 from keyring.errors import PasswordDeleteError
+import cryptography
 
-from secure_key import (                   # ← imports from the new helper
-    ENGINES,
-    DEFAULT_ENGINE,
-    _provider_service,
-    _encrypt,
-    _cache_passphrase,
-    _validate_passphrase,                  # used for cache purge on Win
-)
+print("--- DIAGNOSTICS ---")
+print(f"Python Executable:    {sys.executable}")
+print(f"Cryptography Version: {cryptography.__version__}")
+print(f"Cryptography Path:    {cryptography.__file__}")
+print("-------------------\n")
+
+# (The rest of the imports and initial setup code is unchanged)
+# ...
+# ...
+if tk.TkVersion < 8.6:
+    tk.messagebox.showerror("Unsupported Tk", f"Tk 8.6+ required (got {tk.TkVersion})")
+    sys.exit(1)
+
+try:
+    from PIL import Image, ImageTk
+except ImportError:
+    Image = ImageTk = None
 
 from secure_key import (
-    _TOKEN_SVC,  # noqa: WPS437 – internal consts are fine in same repo
+    ENGINES, _encrypt, _decrypt, _cached_pw,
+    _provider_service as _provider,
+    _PASS_REGEX, _TOKEN_SVC, _SHARED, _RATE,
+    _LOW_POWER, get_platform_info, secure_zero_memory, PLACEHOLDER,
+    _get_ttl, _set_ttl, _TTL_KEY,
+    _get_default_engine, _set_default_engine, _ENGINE_KEY
 )
-if os.name == "nt":
-    from secure_key import _cache_path  # type: ignore
+from constants import TOKEN_KEYS
 
-from constants import TOKEN_KEYS  # list[str] | list[tuple[str,str]]
+_MODE_KEY = "_passphrase_mode"
+_ICON_B64 = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAThJREFUSEvtVD1KxEAU/jJipwdYJPkGvIB4Ai0stLS1Eay9g95DsLPcTiws9AZ7ATF5E1isBRtZ9smEZMmuWZMBk2qnGphv3vfz3kyEnlfUc31sCFoTHj4iklcA7lakXYjIQ6vcBsCSA5LfALabCqnqzDnXePYX8YKA5AzAlgcbY2yapuL3cRzvG2PeyiJfIrIT4qQgsNZequq934tIY19IatfCqnrnLvx+KJYdXk+n+/leT611h6p6ksBiKLjLMterbUHqjoJJVkiqNSvql3nqomM5BmAR3/mnfwLAclTEXkq01hPEBjRREQOSU4BjAC8A7iuq/d9GKbJpbWgMSX5CWAXwIeIjCon9QlaTFHVrNCHRvJcRMbV/SRJTpxzz/Xm/5r5Xr+KrjMeghv+Nw1R1wW7cdCa0g9vCLvNhFGZKQAAAABJRU5ErkJggg=="
 
-# ───────────────────────── tokens / colours ──────────────────────────
-TITLE = "Secure-Key Setup"
-ICON_B64 = (
-    "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAThJREFU"
-    "SEvtVD1KxEAU/jJipwdYJPkGvIB4Ai0stLS1Eay9g95DsLPcTiws9AZ7ATF5E1isBRtZ9smE"
-    "ZMmuWZMBk2qnGphv3vfz3kyEnlfUc31sCFoTHj4iklcA7lakXYjIQ6vcBsCSA5LfALabCqnq"
-    "zDnXePYX8YKA5AzAlgcbY2yapuL3cRzvG2PeyiJfIrIT4qQgsNZequq934tIY19IatfCqnr"
-    "rnLvx+KJYdXk+n+/leT611h6p6ksBiKLjLMterbUHqjoJJVkiqNSvql3nqomM5BmAR3/mnfw"
-    "LAclTEXkq01hPEBjRREQOSU4BjAC8A7iuq/d9GKbJpbWgMSX5CWAXwIeIjCon9QlaTFHVrNC"
-    "HRvJcRMbV/SRJTpxzz/Xm/5r5Xr+KrjMeghv+Nw1R1wW7cdCa0g9vCLvNhFGZKQAAAABJRU5E"
-    "rkJggg=="
-)
-PRIMARY, PRIMARY_HOV, PRIMARY_PRS = "#1976D2", "#1565C0", "#0D47A1"
-BG_WINDOW, FG_LABEL, FG_TEXT = "#F4F6F8", "#5F6368", "#202124"
-FONT_UI = ("Segoe UI", 10)
 
-# ─────────────────────────── GUI class ───────────────────────────────
+def _icon(master: tk.Misc) -> tk.PhotoImage:
+    if Image:
+        raw = base64.b64decode(_ICON_B64)
+        return ImageTk.PhotoImage(Image.open(io.BytesIO(raw)), master=master)
+    return tk.PhotoImage(data=_ICON_B64, master=master)
+
+
 class SetupGUI(tk.Tk):
+    # (The __init__ and other builder functions are unchanged)
+    # ...
+    # ...
     def __init__(self) -> None:
         super().__init__()
-        # window basics
-        self.title(TITLE)
-        self.iconphoto(True, tk.PhotoImage(data=ICON_B64))
-        self.configure(background=BG_WINDOW)
-        self.resizable(False, False)
+        self.title("Secure‑Key Setup")
+        with contextlib.suppress(Exception):
+            self.iconphoto(True, _icon(self))
 
-        # global ttk style
-        style = ttk.Style(self)
-        style.theme_use("clam")
-        style.configure(".", font=FONT_UI, background=BG_WINDOW)
-        style.configure("TLabel", foreground=FG_LABEL, background=BG_WINDOW)
-        style.configure(
-            "Flat.TEntry",
-            relief="flat",
-            padding=4,
-            fieldbackground="white",
-            foreground=FG_TEXT,
-        )
-        style.configure(
-            "Primary.TButton",
-            foreground="white",
-            background=PRIMARY,
-            padding=(14, 6),
-            borderwidth=0,
-        )
-        style.map(
-            "Primary.TButton",
-            background=[("active", PRIMARY_HOV), ("pressed", PRIMARY_PRS)],
-        )
-
-        # card frame
-        card = ttk.Frame(self, padding=24)
-        card.grid()
-        card.columnconfigure(1, weight=1)
-
-        self.inputs: dict[str, ttk.Entry] = {}
-
-        # ---------- token fields --------------------------------------
-        for row, item in enumerate(TOKEN_KEYS):
-            key, label = (
-                item if isinstance(item, tuple) else (item, item.replace("_API_KEY", "").replace("_", " ").title() + " API key")
-            )
-            ttk.Label(card, text=label + ":").grid(
-                row=row, column=0, sticky="e", padx=(0, 12), pady=4
-            )
-            ent = ttk.Entry(
-                card,
-                width=38,
-                show="*" if "KEY" in key else "",
-                style="Flat.TEntry",
-            )
-            ent.grid(row=row, column=1, pady=4, sticky="ew")
-            self.inputs[key] = ent
-
-        cur_row = len(TOKEN_KEYS)
-
-        # ---------- engine selector -----------------------------------
-        ttk.Label(card, text="Crypto engine:").grid(
-            row=cur_row, column=0, sticky="e", padx=(0, 12), pady=(12, 4)
-        )
-        self.engine_box = ttk.Combobox(
-            card,
-            values=list(ENGINES.keys()),
-            state="readonly",
-            width=35,
-        )
-        self.engine_box.set(DEFAULT_ENGINE)
-        self.engine_box.grid(row=cur_row, column=1, pady=(12, 4), sticky="ew")
-        cur_row += 1
-
-        # ---------- TTL ----------------------------------------------
-        ttk.Label(card, text="Cache TTL (sec):").grid(
-            row=cur_row, column=0, sticky="e", padx=(0, 12), pady=4
-        )
-        self.ttl_entry = ttk.Entry(card, width=38, style="Flat.TEntry")
-        self.ttl_entry.insert(0, "900")
-        self.ttl_entry.grid(row=cur_row, column=1, pady=4, sticky="ew")
-        cur_row += 1
-
-        # ---------- pass-phrase --------------------------------------
-        ttk.Label(card, text="Pass-phrase:").grid(
-            row=cur_row, column=0, sticky="e", padx=(0, 12), pady=(12, 4)
-        )
-        self.pass_entry = ttk.Entry(card, width=38, show="*", style="Flat.TEntry")
-        self.pass_entry.grid(row=cur_row, column=1, pady=(12, 4), sticky="ew")
-        cur_row += 1
-
-        # ---------- action buttons -----------------------------------
-        save_btn = ttk.Button(
-            card, text="Save", style="Primary.TButton", command=self.save
-        )
-        save_btn.grid(row=cur_row, column=0, sticky="ew", pady=(16, 4))
-
-        clear_btn = ttk.Button(card, text="Clear cache", command=self.clear_cache)
-        clear_btn.grid(row=cur_row, column=1, sticky="ew", pady=(16, 4))
-        cur_row += 1
-
-        # ---------- status banner ------------------------------------
-        self.status_lbl = ttk.Label(card, text="", anchor="center")
-        self.status_lbl.grid(row=cur_row, column=0, columnspan=2, sticky="ew", pady=(4, 2))
-
-        self.update_idletasks()
-        self.minsize(self.winfo_width(), self.winfo_height())
-
-    # ───────────────────── save secrets ────────────────────────────
-    def save(self) -> None:
-        phrase = self.pass_entry.get().strip()
-        if not phrase:
-            self._status("Pass-phrase cannot be empty.", "red")
-            return
-
-        try:
-            ttl = int(self.ttl_entry.get())
-            if ttl < 0:
-                raise ValueError
-        except ValueError:
-            self._status("TTL must be a non-negative integer.", "red")
-            return
-
-        engine = self.engine_box.get()
-        if engine not in ENGINES:
-            self._status("Invalid engine selected.", "red")
-            return
-
-        saved = 0
-        for key, entry in self.inputs.items():
-            val = entry.get().strip()
-            if not val:
-                continue
-            ns = _provider_service(key)
-            keyring.set_password(ns, key, _encrypt(val, phrase, engine))
-            _cache_passphrase(ns, phrase, ttl)
-            saved += 1
-
-        if saved:
-            self._status(f"✔ Stored {saved} secret(s).", "green")
-        else:
-            self._status("No values entered.", "orange")
-
-    # ───────────────────── clear cache ─────────────────────────────
-    def clear_cache(self) -> None:
-        deleted = 0
+        self.existing_secrets = {}
         for item in TOKEN_KEYS:
             key = item[0] if isinstance(item, tuple) else item
-            ns = _provider_service(key)
-            # delete ciphertext
-            try:
-                keyring.delete_password(ns, key)
-                deleted += 1
-            except PasswordDeleteError:
-                pass
-            # delete pass-phrase cache
-            if os.name == "nt":
-                _cache_path(ns).unlink(missing_ok=True)
+            ns = _provider(key)
+            if keyring.get_password(ns, key): self.existing_secrets[key] = ns
+
+        self.secrets_exist = bool(self.existing_secrets)
+        stored_mode = keyring.get_password(_TOKEN_SVC, _MODE_KEY)
+        self.mode_locked = stored_mode is not None
+
+        self.columnconfigure(0, weight=1);
+        self.rowconfigure(0, weight=1)
+        self.card = ttk.Frame(self, padding=24)
+        self.card.grid(row=0, column=0, sticky="nsew")
+        self.card.columnconfigure(1, weight=1)
+
+        self.mode_var = tk.StringVar(value=stored_mode or "global")
+        self.inputs: dict[str, ttk.Entry] = {}
+        self.pw_inputs: dict[str, ttk.Entry] = {}
+        self.pw_labels: dict[str, ttk.Label] = {}
+        self.rotate_var = tk.BooleanVar(value=False)
+        self.rotate_chk = self.old_pass_entry = self.old_pass_label = None
+        self.new_pass_label = self.rotate_warning = None
+        self.new_pass_label = self.rotate_warning = None
+        self.locked_mode_label = None
+
+        r = self._build_mode_selector(0)
+        r = self._build_secret_rows(r)
+        r = self._build_config_rows(r)
+        r = self._build_passphrase_section(r)
+        r = self._build_diag(r)
+        self._build_buttons(r)
+
+        self.initial_ttl = _get_ttl()
+        self.ttl_var.set(str(self.initial_ttl))
+        self.initial_engine = _get_default_engine()
+        self.engine_box.set(self.initial_engine)
+
+        self._update_ui_state()
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _set_placeholder(self, entry: ttk.Entry):
+        entry.delete(0, tk.END);
+        entry.insert(0, "********");
+        entry.config(foreground="grey")
+
+    def _clear_entry(self, entry: ttk.Entry):
+        entry.delete(0, tk.END);
+        entry.config(foreground="black")
+
+    def _build_mode_selector(self, start: int) -> int:
+        ttk.Label(self.card, text="Passphrase Mode", font="-weight bold").grid(
+            row=start, column=0, columnspan=2, sticky="w", pady=(0, 8))
+        mode_frame = ttk.Frame(self.card)
+        mode_frame.grid(row=start + 1, column=0, columnspan=2, sticky="w", pady=(0, 12))
+        self.global_rb = ttk.Radiobutton(mode_frame, text="Global passphrase",
+                                         variable=self.mode_var, value="global",
+                                         command=self._on_mode_change)
+        self.global_rb.grid(row=0, column=0, padx=(0, 20))
+        self.local_rb = ttk.Radiobutton(mode_frame, text="Per-namespace passphrase",
+                                        variable=self.mode_var, value="local",
+                                        command=self._on_mode_change)
+        self.local_rb.grid(row=0, column=1)
+        if self.mode_locked:
+            self.global_rb.configure(state="disabled")
+            self.local_rb.configure(state="disabled")
+            status_text = f" (Locked to {self.mode_var.get()} mode)"
+            self.locked_mode_label = ttk.Label(mode_frame, text=status_text, foreground="grey")
+            self.locked_mode_label.grid(row=0, column=2, padx=(20, 0))
+        return start + 2
+
+    def _build_secret_rows(self, start: int) -> int:
+        ttk.Label(self.card, text="Secrets to store", font="-weight bold").grid(
+            row=start, column=0, columnspan=2, sticky="w", pady=(0, 8))
+        self.secrets_frame = ttk.Frame(self.card)
+        self.secrets_frame.grid(row=start + 1, column=0, columnspan=2, sticky="ew", pady=(0, 12))
+        self.secrets_frame.columnconfigure(1, weight=1)
+        r = 0
+        for item in TOKEN_KEYS:
+            key, label = item if isinstance(item, tuple) else (item,
+                                                               item.replace("_API_KEY", "").replace("_", " ").title())
+            ttk.Label(self.secrets_frame, text=f"{label}:").grid(row=r, column=0, sticky="e", padx=(0, 8), pady=2)
+            ent = ttk.Entry(self.secrets_frame, width=44, show="*" if "KEY" in key else "")
+            ent.grid(row=r, column=1, sticky="ew", pady=2)
+            if key in self.existing_secrets: self._set_placeholder(ent)
+            ent.bind("<KeyRelease>", lambda _e: self._update_ui_state(), add="+")
+            self.inputs[key] = ent
+            pw_label = ttk.Label(self.secrets_frame, text="  Passphrase:")
+            pw_ent = ttk.Entry(self.secrets_frame, width=30, show="*")
+            pw_ent.bind("<KeyRelease>", lambda _e: self._update_ui_state(), add="+")
+            self.pw_inputs[key], self.pw_labels[key] = pw_ent, pw_label
+            if self.mode_var.get() == "local":
+                pw_label.grid(row=r, column=2, sticky="e", padx=(20, 8))
+                pw_ent.grid(row=r, column=3, sticky="ew", pady=2)
+                if key in self.existing_secrets: self._set_placeholder(pw_ent)
+            r += 1
+        return start + 2
+
+    def _build_config_rows(self, row: int) -> int:
+        ttk.Label(self.card, text="Configuration", font="-weight bold").grid(
+            row=row, column=0, columnspan=2, sticky="w", pady=(16, 8))
+        row += 1
+        config_frame = ttk.Frame(self.card)
+        config_frame.grid(row=row, column=0, columnspan=2, sticky="ew")
+        config_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(config_frame, text="Default engine:").grid(row=0, column=0, sticky="e", padx=(0, 8))
+        self.engine_box = ttk.Combobox(config_frame, state="readonly", values=list(ENGINES.keys()), width=41)
+        self.engine_box.grid(row=0, column=1, sticky="ew", pady=2)
+        self.engine_box.bind("<<ComboboxSelected>>", lambda e: self._update_ui_state())
+
+        ttk.Label(config_frame, text="Cache TTL (sec):").grid(row=1, column=0, sticky="e", padx=(0, 8), pady=(4, 0))
+        self.ttl_var = tk.StringVar()
+        self.ttl_entry = ttk.Entry(config_frame, textvariable=self.ttl_var, width=44)
+        self.ttl_entry.grid(row=1, column=1, sticky="ew", pady=(4, 2))
+        self.ttl_entry.bind("<KeyRelease>", lambda e: self._update_ui_state())
+
+        self.config_save_btn = ttk.Button(config_frame, text="Save Configuration", command=self.save_configuration)
+        self.config_save_btn.grid(row=2, column=1, sticky="e", pady=(8, 0))
+        return row + 1
+
+    def _build_passphrase_section(self, row: int) -> int:
+        self.global_pw_frame = ttk.Frame(self.card);
+        self.global_pw_frame.columnconfigure(1, weight=1)
+        ttk.Label(self.global_pw_frame, text="Master pass‑phrase", font="-weight bold").grid(row=0, column=0,
+                                                                                             columnspan=2, sticky="w",
+                                                                                             pady=(0, 8))
+        ttk.Label(self.global_pw_frame, text="Pass‑phrase:").grid(row=1, column=0, sticky="e", padx=(0, 8))
+        self.global_pass_entry = ttk.Entry(self.global_pw_frame, width=44, show="*")
+        self.global_pass_entry.grid(row=1, column=1, sticky="ew", pady=2)
+        self.global_pass_entry.bind("<KeyRelease>", lambda e: (self._update_strength(), self._update_ui_state()),
+                                    add="+")
+
+        if self.mode_locked and self.mode_var.get() == "global" and self.secrets_exist:
+            self._set_placeholder(self.global_pass_entry);
+            self.global_pass_entry.configure(state="disabled")
+            self.rotate_chk = ttk.Checkbutton(self.global_pw_frame, text="Change master pass‑phrase",
+                                              variable=self.rotate_var, command=self._toggle_rotation)
+            self.rotate_chk.grid(row=2, column=1, sticky="w", pady=(4, 0))
+            self.old_pass_label = ttk.Label(self.global_pw_frame, text="Current pass‑phrase:")
+            self.old_pass_entry = ttk.Entry(self.global_pw_frame, width=44, show="*")
+            self.old_pass_entry.bind("<KeyRelease>", lambda e: self._update_ui_state(), add="+")
+            self.new_pass_label = ttk.Label(self.global_pw_frame, text="New pass‑phrase:")
+            self.rotate_warning = ttk.Label(self.global_pw_frame,
+                                            text="⚠ If you forgot the current passphrase, purge all data and start over",
+                                            foreground="red", font="-size 9")
+
+        self.strength_lbl = ttk.Label(self.global_pw_frame, text="", anchor="w")
+        self.strength_lbl.grid(row=7, column=1, sticky="w", pady=(0, 4))
+        if self.mode_var.get() == "global":
+            self.global_pw_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(16, 0))
+        return row + 1
+
+    def _toggle_rotation(self):
+        if self.rotate_var.get():
+            self.global_pass_entry.grid_forget();
+            self.strength_lbl.grid_forget()
+            self.old_pass_label.grid(row=3, column=0, sticky="e", padx=(0, 8), pady=(8, 2))
+            self.old_pass_entry.grid(row=3, column=1, sticky="ew", pady=(8, 2))
+            self.new_pass_label.grid(row=4, column=0, sticky="e", padx=(0, 8), pady=2)
+            self.global_pass_entry.configure(state="normal");
+            self._clear_entry(self.global_pass_entry)
+            self.global_pass_entry.grid(row=4, column=1, sticky="ew", pady=2)
+            self.rotate_warning.grid(row=5, column=1, sticky="w", pady=(4, 0))
+            self.strength_lbl.grid(row=6, column=1, sticky="w", pady=(0, 4))
+            self.old_pass_entry.focus_set()
+        else:
+            self.old_pass_label.grid_forget();
+            self.old_pass_entry.grid_forget();
+            self._clear_entry(self.old_pass_entry)
+            self.new_pass_label.grid_forget();
+            self.rotate_warning.grid_forget()
+            self._set_placeholder(self.global_pass_entry);
+            self.global_pass_entry.configure(state="disabled")
+            self.global_pass_entry.grid(row=1, column=1, sticky="ew", pady=2)
+            self.strength_lbl.grid(row=7, column=1, sticky="w", pady=(0, 4))
+        self._update_strength();
+        self._update_ui_state()
+
+    def _on_mode_change(self):
+        if self.mode_locked: return
+        mode = self.mode_var.get()
+        pw_frame_row = self.card.grid_size()[1] - 3
+        if mode == "global":
+            for key in self.inputs: self.pw_labels[key].grid_forget(); self.pw_inputs[key].grid_forget()
+            self.global_pw_frame.grid(row=pw_frame_row, column=0, columnspan=2, sticky="ew", pady=(16, 0))
+        else:
+            r = 0
+            for key in self.inputs:
+                self.pw_labels[key].grid(row=r, column=2, sticky="e", padx=(20, 8))
+                self.pw_inputs[key].grid(row=r, column=3, sticky="ew", pady=2)
+                r += 1
+            self.global_pw_frame.grid_forget()
+        self._update_ui_state();
+        self._update_strength()
+
+    def _build_diag(self, row: int) -> int:
+        diag = get_platform_info().splitlines();
+        diag.append(f"LOW POWER mode: {'ON' if _LOW_POWER else 'OFF'}")
+        self.status_lbl = ttk.Label(self.card, text="\n".join(diag), justify="left", foreground="grey")
+        self.status_lbl.grid(row=row, column=0, columnspan=2, sticky="w", pady=(12, 4))
+        return row + 1
+
+    def _build_buttons(self, row: int) -> None:
+        bar = ttk.Frame(self.card)
+        bar.grid(row=row, column=0, columnspan=2, pady=(12, 0), sticky="ew")
+        bar.columnconfigure((0, 1), weight=1)
+        style = ttk.Style(self);
+        style.configure("Main.TButton", font="-size 10", padding=(6, 6))
+        self.save_btn = ttk.Button(bar, text="Save secrets", style="Main.TButton", command=self.save)
+        self.save_btn.grid(row=0, column=0, sticky="ew", padx=2)
+        self.purge_btn = ttk.Button(bar, text="Purge all data", style="Main.TButton", command=self._show_banner)
+        self.purge_btn.grid(row=0, column=1, sticky="ew", padx=2)
+
+    def _update_strength(self):
+        if self.mode_var.get() != "global": return
+        txt = self.global_pass_entry.get()
+        is_rotating = self.rotate_var.get()
+        is_disabled = self.global_pass_entry["state"] == "disabled"
+
+        if is_rotating:
+            if _PASS_REGEX.fullmatch(txt):
+                self.strength_lbl.config(text="✓ strong new pass‑phrase", foreground="green")
+            elif txt:
+                self.strength_lbl.config(text="needs ≥14 chars incl. A‑Z a‑z 0‑9 symbol", foreground="red")
             else:
+                self.strength_lbl.config(text="enter a strong new pass‑phrase", foreground="grey")
+        elif is_disabled:
+            self.strength_lbl.config(text="using existing pass‑phrase", foreground="grey")
+        else:
+            if _PASS_REGEX.fullmatch(txt):
+                self.strength_lbl.config(text="✓ strong", foreground="green")
+            elif txt:
+                self.strength_lbl.config(text="needs ≥14 chars incl. A‑Z a‑z 0‑9 symbol", foreground="red")
+            else:
+                self.strength_lbl.config(text="enter a strong pass‑phrase", foreground="grey")
+
+    def _has_secret_input(self) -> bool:
+        return any(e.get().strip() and e.get().strip() not in (PLACEHOLDER, "********") for e in self.inputs.values())
+
+    def _update_ui_state(self):
+        # -- THIS IS THE CORRECTED FUNCTION --
+
+        # Always update the purge button's state first.
+        self.purge_btn.config(state=tk.NORMAL if self.secrets_exist else tk.DISABLED)
+
+        # -- Config Save Button State --
+        try:
+            ttl_changed = int(self.ttl_var.get()) != self.initial_ttl
+            valid_ttl = int(self.ttl_var.get()) > 0
+        except (ValueError, TypeError):
+            ttl_changed = True;
+            valid_ttl = False
+
+        engine_changed = self.engine_box.get() != self.initial_engine
+
+        # Lock engine choice if mode is locked
+        if self.mode_locked:
+            self.engine_box.config(state="disabled")
+            engine_changed = False
+        else:
+            self.engine_box.config(state="readonly")
+
+        self.config_save_btn.config(state=tk.NORMAL if (ttl_changed or engine_changed) and valid_ttl else tk.DISABLED)
+
+        # -- Secrets Save Button State (with early exit) --
+        new_keys = self._has_secret_input()
+        rotating = self.rotate_var.get()
+        if not new_keys and not rotating:
+            self.save_btn.config(state=tk.DISABLED)
+            return  # This early return is now safe.
+
+        enable = False
+        if self.mode_var.get() == "global":
+            if self.mode_locked and self.secrets_exist and not rotating:
+                enable = new_keys
+            elif rotating:
+                old_pw = self.old_pass_entry.get() if self.old_pass_entry else ""
+                new_pw = self.global_pass_entry.get()
+                enable = bool(old_pw and new_pw and _PASS_REGEX.fullmatch(new_pw))
+            else:
+                pw = self.global_pass_entry.get()
+                enable = new_keys and bool(pw and _PASS_REGEX.fullmatch(pw))
+        else:  # per-namespace mode
+            enable = True
+            if not new_keys:
+                enable = False
+            else:
+                for key, ent in self.inputs.items():
+                    val = ent.get().strip()
+                    if val and val not in (PLACEHOLDER, "********"):
+                        pw = self.pw_inputs[key].get()
+                        if self.mode_locked and key not in self.existing_secrets:
+                            if not pw or pw == "********" or not _PASS_REGEX.fullmatch(pw): enable = False; break
+                        elif not self.mode_locked:
+                            if not pw or not _PASS_REGEX.fullmatch(pw): enable = False; break
+        self.save_btn.config(state=tk.NORMAL if enable else tk.DISABLED)
+
+    def _status(self, msg: str, color="blue"):
+        self.status_lbl.config(text=msg, foreground=color)
+
+    # (The rest of the file, including save(), save_configuration(), etc., is unchanged)
+    # ...
+    # ...
+    def save_configuration(self) -> None:
+        """Save TTL and default engine to the keyring."""
+        try:
+            new_ttl = int(self.ttl_var.get())
+            if new_ttl <= 0:
+                return self._status("Cache TTL must be a positive number", "red")
+            if new_ttl != self.initial_ttl:
+                _set_ttl(new_ttl)
+                self.initial_ttl = new_ttl
+        except (ValueError, TypeError):
+            return self._status("Cache TTL must be a valid number", "red")
+
+        new_engine = self.engine_box.get()
+        if new_engine != self.initial_engine:
+            _set_default_engine(new_engine)
+            self.initial_engine = new_engine
+
+        self._status("✅ Configuration saved.", "green")
+        self._update_ui_state()
+
+    def save(self) -> None:
+        engine = self.engine_box.get()
+        mode = self.mode_var.get()
+        rotating = self.rotate_var.get()
+        new_data = {k: e.get().strip() for k, e in self.inputs.items() if
+                    e.get().strip() and e.get().strip() not in (PLACEHOLDER, "********")}
+        self._status("", "black")
+        saved = failed = rotated = 0
+        saved_pws = []
+
+        try:
+            if mode == "global":
+                pw_to_use = None
+                if rotating:
+                    current_pw, new_pw = self.old_pass_entry.get(), self.global_pass_entry.get()
+                    if not current_pw: return self._status("Current pass‑phrase required", "red")
+                    if not new_pw or not _PASS_REGEX.fullmatch(new_pw): return self._status(
+                        "New pass‑phrase must be strong", "red")
+                    test_key = next(iter(self.existing_secrets.keys()))
+                    test_blob = keyring.get_password(self.existing_secrets[test_key], test_key)
+                    try:
+                        _decrypt(test_blob, current_pw)
+                    except:
+                        return self._status("Current pass‑phrase is incorrect", "red")
+                    for key, ns in self.existing_secrets.items():
+                        blob = keyring.get_password(ns, key)
+                        if blob:
+                            try:
+                                plain = _decrypt(blob, current_pw)
+                                keyring.set_password(ns, key, _encrypt(plain, new_pw, engine));
+                                rotated += 1
+                            except Exception as exc:
+                                failed += 1;
+                                print(f"[GUI] rotate {key}: {exc}", file=sys.stderr)
+                    pw_to_use = new_pw
+                    saved_pws.append(bytearray(current_pw.encode()))
+                elif self.mode_locked and self.secrets_exist and new_data:
+                    pw_to_use = simpledialog.askstring("Master pass‑phrase", "Enter master pass‑phrase:", show="*")
+                    if not pw_to_use: return self._status("Pass‑phrase required for new secrets", "red")
+                elif new_data:
+                    pw_to_use = self.global_pass_entry.get()
+                    if not pw_to_use or not _PASS_REGEX.fullmatch(pw_to_use): return self._status(
+                        "Pass‑phrase must be strong", "red")
+
+                if pw_to_use:
+                    saved_pws.append(bytearray(pw_to_use.encode()))
+                    for k, v in new_data.items():
+                        try:
+                            keyring.set_password(_provider(k), k, _encrypt(v, pw_to_use, engine));
+                            saved += 1
+                        except Exception as exc:
+                            failed += 1;
+                            print(f"[GUI] store {k}: {exc}", file=sys.stderr)
+            else:  # per-namespace
+                for k, v in new_data.items():
+                    if self.mode_locked and k in self.existing_secrets:
+                        pw = simpledialog.askstring(f"Pass‑phrase for {k}", f"Enter pass‑phrase for {k}:", show="*")
+                        if not pw: failed += 1; continue
+                    else:
+                        pw = self.pw_inputs[k].get()
+                        if not pw or not _PASS_REGEX.fullmatch(pw): failed += 1; continue
+                    saved_pws.append(bytearray(pw.encode()))
+                    try:
+                        keyring.set_password(_provider(k), k, _encrypt(v, pw, engine));
+                        saved += 1
+                    except Exception as exc:
+                        failed += 1;
+                        print(f"[GUI] store {k}: {exc}", file=sys.stderr)
+
+            # --- THIS IS THE MODIFIED BLOCK ---
+            if not self.mode_locked and (saved > 0 or rotated > 0):
+                # This block runs only on the very first save.
+                # Lock the mode
+                keyring.set_password(_TOKEN_SVC, _MODE_KEY, mode)
+                self.mode_locked = True
+
+                # Also save the current configuration as the new default
                 try:
-                    keyring.delete_password(_TOKEN_SVC, f"{ns}/_shared")
-                except PasswordDeleteError:
-                    pass
-        self._status(
-            f"{'🗑  Cleared' if deleted else 'Nothing to clear.'}", "green" if deleted else "orange"
-        )
-        for ent in self.inputs.values():
-            ent.delete(0, tk.END)
+                    new_ttl = int(self.ttl_var.get())
+                    if new_ttl > 0:
+                        _set_ttl(new_ttl)
+                        self.initial_ttl = new_ttl
 
-    # ───────────────────── helper ────────────────────────────────
-    def _status(self, msg: str, color: str) -> None:
-        self.status_lbl.configure(text=msg, foreground=color)
+                    new_engine = self.engine_box.get()
+                    _set_default_engine(new_engine)
+                    self.initial_engine = new_engine
+                except Exception as e:
+                    log.warning(f"Failed to save initial config: {e}")
+
+                self.global_rb.configure(state="disabled")
+                self.local_rb.configure(state="disabled")
+                self._update_ui_state()  # Re-run to lock the engine box
+
+            if saved > 0 or rotated > 0: self.secrets_exist = True
+            for key in new_data:
+                self.existing_secrets[key] = _provider(key)
+                self._set_placeholder(self.inputs[key])
+                if mode == "local": self._set_placeholder(self.pw_inputs[key])
+            if mode == "global":
+                if rotating:
+                    self.rotate_var.set(False);
+                    self._toggle_rotation()
+                elif not self.mode_locked or self.global_pass_entry["state"] == "normal":
+                    self._set_placeholder(self.global_pass_entry)
+                    if self.secrets_exist: self.global_pass_entry.configure(state="disabled")
+
+            msg_parts = []
+            if rotated > 0: msg_parts.append(f"rotated {rotated} secret(s)")
+            if saved > 0: msg_parts.append(f"saved {saved} secret(s)")
+            msg = f"✅ {' & '.join(msg_parts)}" if msg_parts else "✅ No changes to save"
+            if failed: msg += f" — {failed} failed"
+            self._status(msg, "green" if not failed else "orange")
+        finally:
+            for pw_buf in saved_pws: secure_zero_memory(pw_buf)
+            for v in new_data.values(): secure_zero_memory(bytearray(v.encode()))
+        self._update_ui_state()
+
+    def _show_banner(self) -> None:
+        if not self.secrets_exist: return
+        banner = ttk.Frame(self, padding=(14, 10), style="Danger.TFrame")
+        banner.grid(row=1, column=0, sticky="ew", pady=(6, 10))
+        sty = ttk.Style(self);
+        sty.configure("Danger.TFrame", background="#e5e5e5")
+        sty.configure("Danger.TLabel", background="#e5e5e5", foreground="#a00000", font="-size 10 -weight bold")
+        ttk.Label(banner, text="⚠ Delete ALL stored secrets & config?", style="Danger.TLabel").pack(side="left")
+        ttk.Button(banner, text="Cancel", command=lambda: (banner.destroy(), self.unbind("<Escape>"))).pack(
+            side="right", padx=3)
+        btn = ttk.Button(banner, text="Delete",
+                         command=lambda: (banner.destroy(), self.unbind("<Escape>"), self._perform_purge()))
+        btn.pack(side="right")
+        self.bind("<Escape>", lambda e: (banner.destroy(), self.unbind("<Escape>")), add="+")
+
+    def _perform_purge(self) -> None:
+        count = 0
+        for item in TOKEN_KEYS:
+            key = item[0] if isinstance(item, tuple) else item
+            ns = _provider(key)
+            with contextlib.suppress(PasswordDeleteError):
+                keyring.delete_password(ns, key)
+                count += 1
+            for suf in (_SHARED, _RATE):
+                with contextlib.suppress(PasswordDeleteError):
+                    keyring.delete_password(_TOKEN_SVC, f"{ns}/{suf}")
+
+        # Delete all config settings
+        with contextlib.suppress(PasswordDeleteError):
+            keyring.delete_password(_TOKEN_SVC, _MODE_KEY)
+        with contextlib.suppress(PasswordDeleteError):
+            keyring.delete_password(_TOKEN_SVC, _TTL_KEY)
+        with contextlib.suppress(PasswordDeleteError):
+            keyring.delete_password(_TOKEN_SVC, _ENGINE_KEY)
+        with contextlib.suppress(PasswordDeleteError):
+            keyring.delete_password(_TOKEN_SVC, "_rate_hmac_key")
+
+        # --- THIS IS THE MODIFIED BLOCK ---
+        # Reset UI completely
+        for ent in self.inputs.values(): self._clear_entry(ent)
+        for pw_ent in self.pw_inputs.values(): self._clear_entry(pw_ent)
+
+        # Force the master passphrase section to reset to its initial state
+        self.rotate_var.set(False)
+        if self.rotate_chk: self.rotate_chk.destroy(); self.rotate_chk = None
+        if self.old_pass_label: self.old_pass_label.grid_forget()
+        if self.old_pass_entry: self._clear_entry(self.old_pass_entry); self.old_pass_entry.grid_forget()
+        if self.new_pass_label: self.new_pass_label.grid_forget()
+        if self.rotate_warning: self.rotate_warning.grid_forget()
+        self.strength_lbl.grid(row=7, column=1, sticky="w", pady=(0, 4))
+        if self.locked_mode_label:  # <-- ADD THIS BLOCK
+            self.locked_mode_label.destroy()
+            self.locked_mode_label = None
+        self.existing_secrets, self.secrets_exist, self.mode_locked = {}, False, False
+        self.global_pass_entry.configure(state="normal")
+        self._clear_entry(self.global_pass_entry)
+        self.global_pass_entry.grid(row=1, column=1, sticky="ew", pady=2)
+        self.strength_lbl.grid(row=7, column=1, sticky="w", pady=(0, 4))
+        # --- END OF MODIFIED BLOCK ---
+
+        self.existing_secrets, self.secrets_exist, self.mode_locked = {}, False, False
+
+        # Re-enable mode selector and reset to global
+        self.global_rb.configure(state="normal")
+        self.local_rb.configure(state="normal")
+        self.mode_var.set("global")
+
+        # Reset config values to new defaults
+        self.initial_engine = _get_default_engine();
+        self.engine_box.set(self.initial_engine)
+        self.initial_ttl = _get_ttl();
+        self.ttl_var.set(str(self.initial_ttl))
+
+        self._status(f"🗑 purged {count} secret(s) + all config", "blue")
+        self._update_ui_state()
+
+    def _on_close(self) -> None:
+        for e in self.inputs.values(): e.delete(0, tk.END)
+        for pw in self.pw_inputs.values(): pw.delete(0, tk.END)
+        self.global_pass_entry.delete(0, tk.END)
+        if self.old_pass_entry: self.old_pass_entry.delete(0, tk.END)
+        with contextlib.suppress(tk.TclError):
+            self.clipboard_clear()
+        self.destroy()
 
 
-# ─────────────────────────── run as script ───────────────────────────
 if __name__ == "__main__":
     SetupGUI().mainloop()

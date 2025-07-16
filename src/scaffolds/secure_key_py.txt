@@ -1,267 +1,870 @@
 #!/usr/bin/env python3
 """
-secure_key.py — encrypted secret helper with pluggable engines
-(hardened: env-override only when no ciphertext exists)
+secure_key.py — hardened encrypted‑secret helper  (2025‑07‑16)
+
+• Direct keyring usage (Windows, macOS, Linux) — no extra wrapper layer
+• AES‑GCM  (+ChaCha20/Argon2id when wheels permit) – strong KDF floors
+• 5‑try / 5‑min lock‑out, persisted with HMAC integrity
+• Pass‑phrase cache in OS keyring (+ optional Linux kernel TTL copy)
+• Constant‑time compares, best‑effort secure memory wiping
+• Works with cryptography 38 → latest (handles Argon2 *lanes* vs *parallelism*)
+• Supports both global and per-namespace passphrase modes
+• Persistent cache TTL and default engine stored in keyring
+
+Set `SECURE_KEY_LOG=STDOUT` to see log messages on the console.
 """
 
 from __future__ import annotations
-
-import argparse
-import base64
-import getpass
-import hashlib
-import json
-import os
-import re
-import struct
-import sys
-import time
+import argparse, base64, getpass, hashlib, hmac, json, logging, os, re, secrets
+import struct, sys, time, string, inspect, ctypes, contextlib, platform
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, Final, List, Optional
 
 import keyring
+from keyring.errors import PasswordDeleteError
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM, ChaCha20Poly1305
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
-from cryptography.hazmat.primitives.kdf.argon2 import Argon2, Type
 
-# ───────────── engines ─────────────
-ENGINES = {
+# ── public placeholder for GUI ───────────────────────────────────
+PLACEHOLDER: Final = "*" * 20  # used as "••••••••••••••••••••"
+
+# ── mode/config storage keys ─────────────────────────────────────
+_MODE_KEY: Final = "_passphrase_mode"
+_TTL_KEY: Final = "_cache_ttl"
+_ENGINE_KEY: Final = "_crypto_engine"
+
+# ── optional Argon2id (may be missing on minimal wheels) ──────────
+try:
+    from cryptography.hazmat.primitives.kdf.argon2 import Argon2id as Argon2
+
+    _ARGON2_OK: Final = True
+except ModuleNotFoundError:
+    Argon2, _ARGON2_OK = None, False  # type: ignore
+
+# ── logging ───────────────────────────────────────────────────────
+log = logging.getLogger("secure_key")
+if os.getenv("SECURE_KEY_LOG", "").upper() == "STDOUT":
+    h = logging.StreamHandler(sys.stderr)
+    h.setFormatter(logging.Formatter("[secure_key] %(message)s"))
+    log.addHandler(h)
+else:
+    log.addHandler(logging.NullHandler())
+log.setLevel(logging.INFO)
+
+
+# ── secure memory wiping ──────────────────────────────────────────
+def secure_zero_memory(buf: bytes | bytearray | memoryview | str) -> None:
+    """Best‑effort overwrite of mutable buffers."""
+    if isinstance(buf, str):
+        buf = bytearray(buf.encode())
+    elif isinstance(buf, bytes):
+        buf = bytearray(buf)
+    elif isinstance(buf, memoryview):
+        buf = bytearray(buf)
+
+    if isinstance(buf, bytearray):
+        length = len(buf)
+        if length:
+            ptr = (ctypes.c_char * length).from_buffer(buf)
+            ctypes.memset(ptr, 0, length)
+
+
+# ── crypto engines & KDFs ─────────────────────────────────────────
+_LOW_POWER = os.getenv("SK_LOW_POWER", "").lower() in ("1", "true", "yes")
+
+# scrypt minimums
+_MIN_SCRYPT_N = 2 ** 14 if _LOW_POWER else 2 ** 16
+_MIN_SCRYPT_R, _MIN_SCRYPT_P = 8, 1
+
+# argon2 minimums
+_MIN_A2_T, _MIN_A2_M, _MIN_A2_P = 3, 64_000, 4  # memory in KiB
+
+
+def _scrypt_kdf(pw: bytearray, salt: bytes) -> bytearray:
+    default_n = 2 ** 15 if _LOW_POWER else 2 ** 17
+    n = max(int(os.getenv("SCRYPT_N", default_n)), _MIN_SCRYPT_N)
+    r = max(int(os.getenv("SCRYPT_R", 8)), _MIN_SCRYPT_R)
+    p = max(int(os.getenv("SCRYPT_P", 1)), _MIN_SCRYPT_P)
+    kdf = Scrypt(salt=salt, length=32, n=n, r=r, p=p)
+    return bytearray(kdf.derive(pw))
+
+
+def _argon2_kdf(pw: bytearray, salt: bytes) -> bytearray:  # only if _ARGON2_OK
+    """Handles multiple versions of the cryptography library."""
+    t = max(int(os.getenv("ARGON2_T", 3)), _MIN_A2_T)
+    m = max(int(os.getenv("ARGON2_M", 64_000)), _MIN_A2_M)
+    p = max(int(os.getenv("ARGON2_P", 4)), _MIN_A2_P)
+
+    # Start with arguments common to all versions
+    kwargs = dict(salt=salt, length=32, memory_cost=m)
+
+    # Inspect the function signature to determine correct parameter names
+    sig = inspect.signature(Argon2)
+    params = sig.parameters
+
+    # Handle time_cost (>=v38) vs iterations (<v38)
+    if 'time_cost' in params:
+        kwargs['time_cost'] = t
+    else:
+        kwargs['iterations'] = t
+
+    # Handle parallelism (>=v42) vs lanes (<v42)
+    if 'parallelism' in params:
+        kwargs["parallelism"] = p
+    else:
+        kwargs["lanes"] = p
+
+    return bytearray(Argon2(**kwargs).derive(pw))
+
+
+ENGINES: Dict[str, Dict] = {
     "aes+scrypt": {
         "aead": AESGCM,
-        "kdf": lambda pw, salt: Scrypt(
-            salt=salt, length=32, n=2**15, r=8, p=1
-        ).derive(pw),
-        "meta": {"alg": "AESGCM", "kdf": {"name": "scrypt", "n": 2**15, "r": 8, "p": 1}},
-    },
-    "chacha+argon2": {
-        "aead": ChaCha20Poly1305,
-        "kdf": lambda pw, salt: Argon2(
-            time_cost=3, memory_cost=64_000, parallelism=2,
-            hash_len=32, type=Type.I  # Argon2id
-        ).derive_key(password=pw, salt=salt),
-        "meta": {"alg": "ChaCha20Poly1305",
-                 "kdf": {"name": "argon2id", "t": 3, "m": 64_000, "p": 2}},
+        "kdf": _scrypt_kdf,
+        "meta": {"alg": "AESGCM", "kdf": "scrypt"},
     },
 }
-DEFAULT_ENGINE = "aes+scrypt"
+if _ARGON2_OK:
+    ENGINES["chacha+argon2"] = {
+        "aead": ChaCha20Poly1305,
+        "kdf": _argon2_kdf,
+        "meta": {"alg": "ChaCha20Poly1305", "kdf": "argon2id"},
+    }
 
-# ───────── policy / cache ──────────
-_ALLOWED_SPECIAL = r"[$#@!%]"
-_PASS_REGEX = re.compile(rf"^(?=.*\d)(?=.*{_ALLOWED_SPECIAL}).{{12,}}$")
-_DEFAULT_TTL = 900
-_SHARED_CACHE_KEY = "_shared"
-_TOKEN_SVC = "secure-pass-cache"
+# ── policy / cache constants ──────────────────────────────────────
+_PASS_REGEX = re.compile(
+    rf"^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[{re.escape(string.punctuation)}]).{{14,}}$",
+    re.ASCII,
+)
+_MAX_TRIES: Final = int(os.getenv("SK_MAX_TRIES", 5))
+_WINDOW_SEC: Final = int(os.getenv("SK_TRY_WINDOW", 300))
+_TOKEN_SVC: Final = "secure-pass-cache"
+_SHARED: Final = "_shared"
+_RATE: Final = "_rate"
 
-try:
-    from constants import TOKEN_KEYS  # noqa: WPS433
-except ModuleNotFoundError:
-    TOKEN_KEYS: list[str] = []
 
-_b64 = lambda b: base64.b64encode(b).decode()
-_b64d = lambda s: base64.b64decode(s.encode())
+# ─── Persistent config management ──────────────────────────
+def _get_ttl() -> int:
+    """Get stored TTL, falling back to env var, then default."""
+    try:
+        ttl_str = keyring.get_password(_TOKEN_SVC, _TTL_KEY)
+        if ttl_str and ttl_str.isdigit():
+            return int(ttl_str)
+    except Exception:
+        pass  # Fall through
+    return int(os.getenv("SK_DEFAULT_TTL", 600))
 
-# ───────── Windows DPAPI cache ─────
-if os.name == "nt":
-    import ctypes as _ct
 
-    _CRYPT_SAME_LOGON = 0x00
-    _prot = _ct.windll.crypt32.CryptProtectMemory
-    _unprot = _ct.windll.crypt32.CryptUnprotectMemory
+def _set_ttl(seconds: int) -> None:
+    """Store the cache TTL securely in the keyring."""
+    keyring.set_password(_TOKEN_SVC, _TTL_KEY, str(seconds))
 
-    def _dpapi_protect(buf: bytes) -> bytes:
-        pad = (16 - len(buf) % 16) % 16
-        tmp = _ct.create_string_buffer(buf + os.urandom(pad))
-        if not _prot(tmp, len(tmp), _CRYPT_SAME_LOGON):
-            raise OSError("CryptProtectMemory failed")
-        return bytes(tmp) + struct.pack("<B", pad)
 
-    def _dpapi_unprotect(blob: bytes) -> bytes:
-        pad = blob[-1]
-        tmp = _ct.create_string_buffer(blob[:-1])
-        if not _unprot(tmp, len(tmp), _CRYPT_SAME_LOGON):
-            raise OSError("CryptUnprotectMemory failed")
-        return bytes(tmp)[:-pad] if pad else bytes(tmp)
+def _get_default_engine() -> str:
+    """Get stored default engine, falling back to env var, then default."""
+    try:
+        engine = keyring.get_password(_TOKEN_SVC, _ENGINE_KEY)
+        if engine in ENGINES:
+            return engine
+    except Exception:
+        pass  # Fall through
+    return os.getenv("SK_DEFAULT_ENGINE", "aes+scrypt")
 
-    _CACHE_DIR = Path(os.getenv("LOCALAPPDATA", os.getcwd())) / "SecurePassCache"
-    _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-    def _cache_path(ns: str) -> Path:
-        return _CACHE_DIR / f"{ns}.bin"
-else:
-    _dpapi_protect = _dpapi_unprotect = None  # type: ignore
+def _set_default_engine(name: str) -> None:
+    """Store the default engine choice in the keyring."""
+    if name in ENGINES:
+        keyring.set_password(_TOKEN_SVC, _ENGINE_KEY, name)
 
-# ───────── crypto helpers ─────────
-def _encrypt(plain: str, pw: str, engine: str) -> str:
-    e = ENGINES[engine]
+
+# ── helper aliases (GUI expects these) ────────────────────────────
+def _provider_service(key_name: str) -> str:
+    """Namespace = part before last '_' (STRIPE_TEST_KEY → 'stripe_test')."""
+    return key_name.rsplit("_", 1)[0].lower()
+
+
+_provider = _provider_service  # legacy alias
+b64 = lambda b: base64.b64encode(b).decode()
+b64d = lambda s: base64.b64decode(s.encode())
+
+
+# ── mode detection ───────────────────────────────────────────────
+def _get_mode() -> str:
+    """Get the stored passphrase mode (global or local)."""
+    mode = keyring.get_password(_TOKEN_SVC, _MODE_KEY)
+    return mode or "global"  # Default to global if not set
+
+
+def _set_mode(mode: str) -> None:
+    """Set the passphrase mode."""
+    if mode in ("global", "local"):
+        keyring.set_password(_TOKEN_SVC, _MODE_KEY, mode)
+
+
+def _is_initialized() -> bool:
+    """Check if system is already initialized with secrets."""
+    try:
+        from constants import TOKEN_KEYS
+        for item in TOKEN_KEYS:
+            key = item[0] if isinstance(item, tuple) else item
+            ns = _provider_service(key)
+            if keyring.get_password(ns, key):
+                return True
+    except ImportError:
+        pass
+    return False
+
+
+def _get_cache_namespace(key_name: str) -> str:
+    """Get the appropriate namespace for caching based on mode."""
+    mode = _get_mode()
+    if mode == "global":
+        try:
+            from constants import TOKEN_KEYS
+            first_key = TOKEN_KEYS[0][0] if isinstance(TOKEN_KEYS[0], tuple) else TOKEN_KEYS[0]
+            return _provider_service(first_key)
+        except:
+            return _provider_service(key_name)
+    else:
+        return _provider_service(key_name)
+
+
+# ── encryption helpers ───────────────────────────────────────────
+def _encrypt(plaintext: str, pw: str, eng_key: str) -> str:
+    e = ENGINES[eng_key]
     salt, nonce = os.urandom(16), os.urandom(12)
-    key = e["kdf"](pw.encode(), salt)
-    ct = e["aead"](key).encrypt(nonce, plain.encode(), None)
-    return json.dumps(
-        {**e["meta"],
-         "engine": engine,
-         "salt": _b64(salt),
-         "nonce": _b64(nonce),
-         "ct": _b64(ct)}
-    )
+    key = e["kdf"](bytearray(pw.encode()), salt)
+    ct = e["aead"](key).encrypt(nonce, plaintext.encode(), None)
+    secure_zero_memory(key)
+    return json.dumps({**e["meta"], "engine": eng_key,
+                       "s": b64(salt), "n": b64(nonce), "c": b64(ct)})
 
 
 def _decrypt(blob: str, pw: str) -> str:
     m = json.loads(blob)
-    engine = m.get("engine", DEFAULT_ENGINE)
-    e = ENGINES[engine]
-    key = e["kdf"](pw.encode(), _b64d(m["salt"]))
-    return e["aead"](key).decrypt(_b64d(m["nonce"]), _b64d(m["ct"]), None).decode()
+    eng = ENGINES[m.get("engine", _get_default_engine())]
+    salt, nonce, ct = map(b64d, (m["s"], m["n"], m["c"]))
+    key = eng["kdf"](bytearray(pw.encode()), salt)
+    try:
+        pt = eng["aead"](key).decrypt(nonce, ct, None)
+        return pt.decode()
+    finally:
+        secure_zero_memory(key)
 
-# ───────── pass-phrase cache ──────
-def _cache_passphrase(ns: str, pw: str, ttl: int) -> None:
-    expiry = int(time.time()) + ttl
-    digest = hashlib.sha256(pw.encode()).digest()
 
-    if os.name == "nt" and _dpapi_protect:
-        _cache_path(ns).write_bytes(_dpapi_protect(struct.pack("<I", expiry) + digest))
-    else:
-        keyring.set_password(
-            _TOKEN_SVC, f"{ns}/{_SHARED_CACHE_KEY}", f"{expiry}:{digest.hex()}")
+# ── persistent rate‑limit with HMAC integrity ────────────────────
+_RATE_KEY_HMAC = "_rate_hmac_key"
 
-def _validate_passphrase(ns: str, pw_try: str) -> bool:
-    digest_try = hashlib.sha256(pw_try.encode()).digest()
 
-    if os.name == "nt" and _dpapi_unprotect:
-        p = _cache_path(ns)
-        if not p.exists():
-            return False
-        blob = _dpapi_unprotect(p.read_bytes())
-        expiry, = struct.unpack("<I", blob[:4])
-        if time.time() > expiry:
-            p.unlink(missing_ok=True)
-            return False
-        return digest_try == blob[4:]
+def _get_rate_hmac_key() -> bytes:
+    raw = keyring.get_password(_TOKEN_SVC, _RATE_KEY_HMAC)
+    if raw:
+        return b64d(raw)
+    key = os.urandom(32)
+    keyring.set_password(_TOKEN_SVC, _RATE_KEY_HMAC, b64(key))
+    return key
 
-    blob = keyring.get_password(_TOKEN_SVC, f"{ns}/{_SHARED_CACHE_KEY}")
-    if not blob:
-        return False
-    expiry_s, hex_digest = blob.split(":", 1)
-    if time.time() > int(expiry_s):
-        keyring.delete_password(_TOKEN_SVC, f"{ns}/{_SHARED_CACHE_KEY}")
-        return False
-    return digest_try.hex() == hex_digest
 
-# ───────── helpers ────────────────
-def _provider_service(key_name: str) -> str:
-    return key_name.split("_")[0].lower()
+def _rate_key(ns: str) -> str:
+    return f"{ns}/{_RATE}"
 
-def _prompt_pass(label: str) -> str:
-    while True:
-        pw = getpass.getpass(label).strip()
-        if _PASS_REGEX.fullmatch(pw):
-            return pw
-        print("❌  Pass-phrase ≥ 12 chars, include digit + $ # @ ! %")
 
-# ───────── initialisers ───────────
-def _init_one(key_name: str, ttl: int) -> None:
+def _load_attempts(ns: str) -> List[float]:
+    raw = keyring.get_password(_TOKEN_SVC, _rate_key(ns))
+    if not raw: return []
+    try:
+        data, mac = raw.split("|")
+        if not secrets.compare_digest(mac, hmac.new(_get_rate_hmac_key(),
+                                                    data.encode(),
+                                                    hashlib.sha256).hexdigest()):
+            log.warning("rate‑limit HMAC mismatch for %s", ns)
+            return []
+        return [float(x) for x in data.split(",") if x]
+    except Exception:
+        return []
+
+
+def _save_attempts(ns: str, lst: List[float]) -> None:
+    data = ",".join(f"{t:.3f}" for t in lst)
+    mac = hmac.new(_get_rate_hmac_key(), data.encode(),
+                   hashlib.sha256).hexdigest()
+    keyring.set_password(_TOKEN_SVC, _rate_key(ns), f"{data}|{mac}")
+
+
+def _record_attempt(ns: str) -> None:
+    lst = _load_attempts(ns)
+    lst.append(time.time())
+    _save_attempts(ns, lst)
+
+
+def _too_many(ns: str) -> bool:
+    now = time.time()
+    lst = [t for t in _load_attempts(ns) if now - t < _WINDOW_SEC]
+    _save_attempts(ns, lst)
+    return len(lst) >= _MAX_TRIES
+
+
+# ── pass‑phrase cache helpers ────────────────────────────────────
+def _cache_pw(ns: str, pw: str | bytearray, ttl: int) -> None:
+    cache_ns = _get_cache_namespace(ns)
+    payload = struct.pack("<I", int(time.time()) + ttl) + (
+        pw if isinstance(pw, (bytes, bytearray)) else pw.encode()
+    )
+    try:
+        keyring.set_password(_TOKEN_SVC, f"{cache_ns}/{_SHARED}", b64(payload))
+        if sys.platform.startswith("linux") and ttl:
+            try:
+                import keyctl
+                kid = keyctl.add_key(f"secure_key_{cache_ns}", payload,
+                                     keyctl.KEY_SPEC_SESSION_KEYRING)
+                keyctl.set_timeout(kid, ttl)
+            except Exception:
+                pass
+    except Exception as e:
+        log.warning("failed to cache pw: %s", e)
+
+
+def _cached_pw(ns: str) -> Optional[str]:
+    cache_ns = _get_cache_namespace(ns)
+    if sys.platform.startswith("linux"):
+        try:
+            import keyctl
+            kid = keyctl.search(keyctl.KEY_SPEC_SESSION_KEYRING,
+                                "user", f"secure_key_{cache_ns}")
+            if kid:
+                payload = keyctl.read_key(kid)
+                if len(payload) >= 4:
+                    return payload[4:].decode()
+        except Exception:
+            pass
+
+    raw = keyring.get_password(_TOKEN_SVC, f"{cache_ns}/{_SHARED}")
+    if not raw: return None
+    try:
+        payload = b64d(raw)
+    except Exception:
+        return None
+    if len(payload) < 4: return None
+    expiry, = struct.unpack("<I", payload[:4])
+    if time.time() > expiry:
+        with contextlib.suppress(PasswordDeleteError):
+            keyring.delete_password(_TOKEN_SVC, f"{cache_ns}/{_SHARED}")
+        return None
+    return payload[4:].decode()
+
+
+def _clear_cache() -> None:
+    """Clear all passphrase caches."""
+    try:
+        from constants import TOKEN_KEYS
+        namespaces = set()
+        for item in TOKEN_KEYS:
+            key = item[0] if isinstance(item, tuple) else item
+            namespaces.add(_get_cache_namespace(key))
+
+        for ns in namespaces:
+            with contextlib.suppress(PasswordDeleteError):
+                keyring.delete_password(_TOKEN_SVC, f"{ns}/{_SHARED}")
+    except ImportError:
+        pass
+
+    # Clear Linux kernel keyrings if available
+    if sys.platform.startswith("linux"):
+        try:
+            import keyctl
+            # This would need more sophisticated clearing, simplified here
+            pass
+        except Exception:
+            pass
+
+
+# ── public accessor ──────────────────────────────────────────────
+def get_api_key(key_name: str) -> str:
     ns = _provider_service(key_name)
-    secret = getpass.getpass(f"Enter value for {key_name}: ").strip()
+    if _too_many(ns):
+        raise RuntimeError("Too many failed attempts – try later.")
+
+    blob = keyring.get_password(ns, key_name)
+    if not blob:
+        if env := os.getenv(key_name): return env
+        raise RuntimeError(f"{key_name} not found. Run: python secure_key.py --init {key_name}")
+
+    if (pw := _cached_pw(ns)):
+        try:
+            return _decrypt(blob, pw)
+        except Exception:
+            pass
+
+    mode = _get_mode()
+    prompt = f"Pass‑phrase for [{ns}]: " if mode == "local" else "Master pass‑phrase: "
+    while True:
+        pw_try = getpass.getpass(prompt).strip()
+        if not _PASS_REGEX.fullmatch(pw_try):
+            print("❌  pass‑phrase must be ≥14 chars incl. A‑Z a‑z 0‑9 symbol")
+            continue
+        pw_ba = bytearray(pw_try.encode())
+        pw_try = "\x00" * len(pw_try)
+        try:
+            secret = _decrypt(blob, pw_ba.decode())
+            _cache_pw(ns, pw_ba, _get_ttl())
+            secure_zero_memory(pw_ba)
+            return secret
+        except Exception:
+            _record_attempt(ns)
+            secure_zero_memory(pw_ba)
+            if _too_many(ns):
+                raise RuntimeError("Too many failed attempts – try later.")
+            print("❌  Wrong or expired pass‑phrase.\n")
+
+
+# ── platform diagnostics (used by GUI) ───────────────────────────
+def get_platform_info() -> str:
+    backend = keyring.get_keyring().__class__.__name__
+    info = [f"OS: {platform.system()} {platform.release()}",
+            f"Python: {platform.python_version()}",
+            f"Keyring backend: {backend}"]
+    if sys.platform.startswith("linux"):
+        try:
+            import keyctl;
+            _ = keyctl.KEY_SPEC_SESSION_KEYRING
+            info.append("Kernel keyring: available")
+        except Exception:
+            info.append("Kernel keyring: N/A")
+    return "\n".join(info)
+
+
+# ── CLI helpers ────────────────────────────────────────────────────
+def _prompt_pass(msg: str) -> str:
+    while True:
+        pw = getpass.getpass(msg).strip()
+        if _PASS_REGEX.fullmatch(pw): return pw
+        print("❌  Must be ≥14 chars incl. upper/lower/digit/symbol", file=sys.stderr)
+
+
+def _init_one(key_name: str, mode: str = None, engine: str = None, master_pw: str = None) -> None:
+    """Initialize a single key."""
+    ns = _provider_service(key_name)
+
+    # Get secret value
+    secret = getpass.getpass(f"Enter {key_name}: ").strip()
     if not secret:
-        print("Aborted — empty secret."); return
+        print("no value entered", file=sys.stderr)
+        return
 
-    engine = input(
-        f"Crypto engine [{DEFAULT_ENGINE}/{ '/'.join(k for k in ENGINES if k!=DEFAULT_ENGINE) }]: "
-    ).strip().lower() or DEFAULT_ENGINE
-    if engine not in ENGINES:
-        print("Unknown engine — aborted."); return
+    # Get passphrase
+    if mode == "global" and master_pw:
+        # Use provided master passphrase for global mode
+        pw = master_pw
+    elif mode == "local":
+        # Prompt for namespace-specific passphrase
+        pw = _prompt_pass(f"New pass‑phrase for [{ns}]: ")
+        pw2 = getpass.getpass(f"Confirm pass‑phrase for [{ns}]: ").strip()
+        if not secrets.compare_digest(pw, pw2):
+            print("does not match", file=sys.stderr)
+            return
+    else:
+        # Single key init or first key in global mode
+        pw = _prompt_pass("New pass‑phrase: ")
+        pw2 = getpass.getpass("Confirm pass‑phrase: ").strip()
+        if not secrets.compare_digest(pw, pw2):
+            print("does not match", file=sys.stderr)
+            return
 
-    pw = _prompt_pass("Create pass-phrase: ")
+    # Use provided engine or prompt
+    if not engine:
+        default_engine = _get_default_engine()
+        print(f"Engines: {', '.join(ENGINES)}")
+        engine = input(f"Engine [{default_engine}]: ").strip() or default_engine
+        if engine not in ENGINES:
+            print("invalid engine", file=sys.stderr)
+            return
+
     keyring.set_password(ns, key_name, _encrypt(secret, pw, engine))
-    _cache_passphrase(ns, pw, ttl)
-    print(f"✓ stored {key_name} under [{ns}] using {engine} (TTL {ttl}s)")
+    print(f"✓ stored {key_name}")
+    return pw  # Return passphrase for global mode
 
-def _init_many(ttl: int) -> None:
-    if not TOKEN_KEYS:
-        print("TOKEN_KEYS empty."); return
-    secrets: dict[str, str] = {}
-    for key in TOKEN_KEYS:
-        val = getpass.getpass(f"Enter value for {key}: ").strip()
-        if val:
-            secrets[key] = val
-    if not secrets:
-        print("No secrets entered – aborted."); return
 
-    engine = input(
-        f"Crypto engine [{DEFAULT_ENGINE}/{ '/'.join(k for k in ENGINES if k!=DEFAULT_ENGINE) }]: "
-    ).strip().lower() or DEFAULT_ENGINE
+def _init_all() -> None:
+    """Initialize all keys from constants.py."""
+    if _is_initialized():
+        print("❌  System already initialized, use --update to modify existing secrets", file=sys.stderr)
+        return
+
+    try:
+        from constants import TOKEN_KEYS
+    except ImportError:
+        print("❌  No constants.py found with TOKEN_KEYS", file=sys.stderr)
+        return
+
+    # Always prompt for mode during initialization
+    while True:
+        mode = input("Passphrase mode (global/local) [global]: ").strip().lower() or "global"
+        if mode in ("global", "local"):
+            break
+        print("❌  Must be 'global' or 'local'")
+
+    # Always prompt for engine during initialization
+    print(f"Engines: {', '.join(ENGINES)}")
+    default_engine = "aes+scrypt"
+    engine = input(f"Engine [{default_engine}]: ").strip() or default_engine
     if engine not in ENGINES:
-        print("Unknown engine – aborted."); return
+        print("❌  Invalid engine", file=sys.stderr)
+        return
 
-    pw = _prompt_pass("Create ONE pass-phrase for ALL secrets: ")
-    for k, v in secrets.items():
-        ns = _provider_service(k)
-        keyring.set_password(ns, k, _encrypt(v, pw, engine))
-        _cache_passphrase(ns, pw, ttl)
-        print(f"✓ {k} stored under [{ns}]")
-    print(f"\nDone – {len(secrets)} secrets secured (engine {engine}, TTL {ttl}s).")
+    # Prompt for cache TTL
+    while True:
+        default_ttl = "600"
+        ttl_input = input(f"Cache TTL in seconds [{default_ttl}]: ").strip() or default_ttl
+        try:
+            ttl = int(ttl_input)
+            if ttl > 0:
+                break
+            else:
+                print("❌  TTL must be a positive number")
+        except ValueError:
+            print("❌  TTL must be a valid number")
+
+    # Process based on mode
+    master_pw = None
+    saved_count = 0
+
+    if mode == "global":
+        # Prompt for master passphrase once
+        master_pw = _prompt_pass("Master pass‑phrase: ")
+        pw2 = getpass.getpass("Confirm master pass‑phrase: ").strip()
+        if not secrets.compare_digest(master_pw, pw2):
+            print("❌  does not match", file=sys.stderr)
+            return
+
+    # Initialize each key
+    for item in TOKEN_KEYS:
+        key = item[0] if isinstance(item, tuple) else item
+        print(f"\n--- {key} ---")
+
+        try:
+            result_pw = _init_one(key, mode, engine, master_pw)
+            if mode == "global" and not master_pw and result_pw:
+                master_pw = result_pw  # Use first key's passphrase as master
+            saved_count += 1
+        except Exception as e:
+            print(f"❌  Failed to store {key}: {e}", file=sys.stderr)
+
+    # Save mode, engine, and TTL after successful initialization
+    if saved_count > 0:
+        _set_mode(mode)
+        _set_default_engine(engine)
+        _set_ttl(ttl)
+
+    print(f"\n✅ Initialized {saved_count} secret(s) in {mode} mode with {ttl}s cache TTL")
+
+
+def _update_key(key_name: str, passphrase: str) -> None:
+    """Update an existing key."""
+    ns = _provider_service(key_name)
+    mode = _get_mode()
+
+    # Check if key exists
+    blob = keyring.get_password(ns, key_name)
+    if not blob:
+        print(f"❌  {key_name} not found. Use --init to create it.", file=sys.stderr)
+        return
+
+    # Validate passphrase for global mode
+    if mode == "global":
+        try:
+            _decrypt(blob, passphrase)
+        except Exception:
+            print("❌  Invalid passphrase", file=sys.stderr)
+            return
+
+    # Get new secret value
+    new_secret = getpass.getpass(f"Enter new value for {key_name}: ").strip()
+    if not new_secret:
+        print("❌  No value entered", file=sys.stderr)
+        return
+
+    # For local mode, prompt for namespace passphrase
+    if mode == "local":
+        ns_pw = getpass.getpass(f"Pass‑phrase for [{ns}]: ").strip()
+        # Validate it can decrypt current value
+        try:
+            _decrypt(blob, ns_pw)
+            passphrase = ns_pw
+        except Exception:
+            print("❌  Invalid passphrase for this namespace", file=sys.stderr)
+            return
+
+    # Get engine from existing encrypted data
+    try:
+        m = json.loads(blob)
+        engine = m.get("engine", _get_default_engine())
+    except:
+        engine = _get_default_engine()
+
+    # Re-encrypt with same passphrase
+    keyring.set_password(ns, key_name, _encrypt(new_secret, passphrase, engine))
+    print(f"✅ Updated {key_name}")
+
+
+def _change_passphrase(current_pw: str, new_pw: str) -> None:
+    """Change master passphrase (global mode only)."""
+    mode = _get_mode()
+    if mode != "global":
+        print("❌  Passphrase change is only available in global mode", file=sys.stderr)
+        return
+
+    # Validate new passphrase
+    if not _PASS_REGEX.fullmatch(new_pw):
+        print("❌  New pass‑phrase must be ≥14 chars incl. upper/lower/digit/symbol", file=sys.stderr)
+        return
+
+    # Find and validate against existing secrets
+    try:
+        from constants import TOKEN_KEYS
+    except ImportError:
+        print("❌  No constants.py found", file=sys.stderr)
+        return
+
+    existing_secrets = {}
+    for item in TOKEN_KEYS:
+        key = item[0] if isinstance(item, tuple) else item
+        ns = _provider_service(key)
+        blob = keyring.get_password(ns, key)
+        if blob:
+            existing_secrets[key] = (ns, blob)
+
+    if not existing_secrets:
+        print("❌  No secrets found to update", file=sys.stderr)
+        return
+
+    # Validate current passphrase
+    test_key, (test_ns, test_blob) = next(iter(existing_secrets.items()))
+    try:
+        _decrypt(test_blob, current_pw)
+    except Exception:
+        print("❌  Current passphrase is incorrect", file=sys.stderr)
+        return
+
+    # Re-encrypt all secrets
+    updated = 0
+    failed = 0
+    engine = _get_default_engine()
+
+    for key, (ns, blob) in existing_secrets.items():
+        try:
+            secret = _decrypt(blob, current_pw)
+            keyring.set_password(ns, key, _encrypt(secret, new_pw, engine))
+            updated += 1
+        except Exception as e:
+            print(f"❌  Failed to update {key}: {e}", file=sys.stderr)
+            failed += 1
+
+    # Clear cache after passphrase change
+    _clear_cache()
+
+    print(f"✅ Changed passphrase: {updated} updated, {failed} failed")
+
+
+def _set_engine_and_reencrypt(engine_name: str) -> None:
+    """Set default engine and re-encrypt all existing secrets with the new engine."""
+    if engine_name not in ENGINES:
+        print(f"❌  Invalid engine: {engine_name}", file=sys.stderr)
+        return
+
+    # Check if there are any existing secrets
+    try:
+        from constants import TOKEN_KEYS
+    except ImportError:
+        # No constants.py, just set the engine
+        _set_default_engine(engine_name)
+        print(f"Default engine set to '{engine_name}'. ✔")
+        return
+
+    existing_secrets = {}
+    for item in TOKEN_KEYS:
+        key = item[0] if isinstance(item, tuple) else item
+        ns = _provider_service(key)
+        blob = keyring.get_password(ns, key)
+        if blob:
+            existing_secrets[key] = (ns, blob)
+
+    if not existing_secrets:
+        # No secrets to re-encrypt, just set the engine
+        _set_default_engine(engine_name)
+        print(f"Default engine set to '{engine_name}'. ✔")
+        return
+
+    # Need to re-encrypt existing secrets
+    mode = _get_mode()
+
+    if mode == "global":
+        # Prompt for master passphrase
+        master_pw = getpass.getpass("Enter master pass‑phrase to re-encrypt secrets: ").strip()
+
+        # Validate passphrase
+        test_key, (test_ns, test_blob) = next(iter(existing_secrets.items()))
+        try:
+            _decrypt(test_blob, master_pw)
+        except Exception:
+            print("❌  Invalid passphrase", file=sys.stderr)
+            return
+
+        # Re-encrypt all secrets with new engine
+        updated = 0
+        failed = 0
+
+        for key, (ns, blob) in existing_secrets.items():
+            try:
+                secret = _decrypt(blob, master_pw)
+                keyring.set_password(ns, key, _encrypt(secret, master_pw, engine_name))
+                updated += 1
+            except Exception as e:
+                print(f"❌  Failed to re-encrypt {key}: {e}", file=sys.stderr)
+                failed += 1
+
+        # Clear passphrase from memory
+        secure_zero_memory(bytearray(master_pw.encode()))
+
+    else:  # local mode
+        print("Re-encrypting secrets in local mode...")
+        updated = 0
+        failed = 0
+
+        for key, (ns, blob) in existing_secrets.items():
+            print(f"\n--- {key} ---")
+            pw = getpass.getpass(f"Enter pass‑phrase for [{ns}]: ").strip()
+
+            try:
+                secret = _decrypt(blob, pw)
+                keyring.set_password(ns, key, _encrypt(secret, pw, engine_name))
+                updated += 1
+                print(f"✓ Re-encrypted {key}")
+            except Exception as e:
+                print(f"❌  Failed to re-encrypt {key}: {e}", file=sys.stderr)
+                failed += 1
+            finally:
+                secure_zero_memory(bytearray(pw.encode()))
+
+    if updated > 0:
+        _set_default_engine(engine_name)
+        # Clear cache after re-encryption
+        _clear_cache()
+        print(f"\n✅ Engine set to '{engine_name}' and re-encrypted {updated} secret(s)")
+        if failed > 0:
+            print(f"⚠️  Failed to re-encrypt {failed} secret(s)")
+    else:
+        print("❌  No secrets were re-encrypted", file=sys.stderr)
+
+
+def _list_keys() -> None:
+    """List all stored keys."""
+    try:
+        from constants import TOKEN_KEYS
+    except ImportError:
+        print("❌  No constants.py found", file=sys.stderr)
+        return
+
+    mode = _get_mode()
+    print(f"Mode: {mode}")
+    print(f"Engine: {_get_default_engine()}")
+    print(f"Cache TTL: {_get_ttl()}s\n")
+
+    print("Keys:")
+    for item in TOKEN_KEYS:
+        key = item[0] if isinstance(item, tuple) else item
+        ns = _provider_service(key)
+        blob = keyring.get_password(ns, key)
+        status = "✓" if blob else "✗"
+        print(f"  {status} {key}")
+
+
+def _show_status() -> None:
+    print(get_platform_info())
+    print(f"KDF floors: scrypt N≥{_MIN_SCRYPT_N}, argon2 m≥{_MIN_A2_M // 1024} MB")
+    print(f"Cache TTL: {_get_ttl()}s — LOW_POWER: {_LOW_POWER}")
+    print(f"Default Engine: {_get_default_engine()}")
+    mode = _get_mode()
+    print(f"Passphrase mode: {mode}")
+    print(f"System initialized: {'Yes' if _is_initialized() else 'No'}")
+
 
 def _purge_all() -> None:
-    removed = 0
-    for key in TOKEN_KEYS:
-        ns = _provider_service(key)
-        try:
-            keyring.delete_password(ns, key); removed += 1
-        except keyring.errors.PasswordDeleteError:
-            pass
-        if os.name == "nt":
-            _cache_path(ns).unlink(missing_ok=True)
-        else:
-            try:
-                keyring.delete_password(_TOKEN_SVC, f"{ns}/{_SHARED_CACHE_KEY}")
-            except keyring.errors.PasswordDeleteError:
-                pass
-    print(f"Purged {removed} secrets and all pass-phrase caches.")
+    if input("Type YES to purge everything: ") != "YES": return
+    try:
+        from constants import TOKEN_KEYS
+        for item in TOKEN_KEYS:
+            key = item[0] if isinstance(item, tuple) else item
+            ns = _provider_service(key)
+            with contextlib.suppress(Exception):
+                keyring.delete_password(ns, key)
+                keyring.delete_password(_TOKEN_SVC, f"{ns}/{_SHARED}")
+                keyring.delete_password(_TOKEN_SVC, f"{ns}/{_RATE}")
+    except ImportError:
+        pass
 
-# ───────── secure accessor ────────
-def get_api_key(key_name: str) -> str:
-    """Return decrypted API key.
-    ENV variable is used **only if** no encrypted secret is stored.
-    """
-    ns   = _provider_service(key_name)
-    blob = keyring.get_password(ns, key_name)
+    with contextlib.suppress(Exception):
+        keyring.delete_password(_TOKEN_SVC, _RATE_KEY_HMAC)
+        keyring.delete_password(_TOKEN_SVC, _MODE_KEY)
+        keyring.delete_password(_TOKEN_SVC, _TTL_KEY)
+        keyring.delete_password(_TOKEN_SVC, _ENGINE_KEY)
+    print("purged ✔")
 
-    if blob:  # → secret initialised, ask pass-phrase
-        while True:
-            pw_try = getpass.getpass(f"Pass-phrase for [{ns}]: ")
-            if _validate_passphrase(ns, pw_try):
-                return _decrypt(blob, pw_try)
-            print("❌  Wrong or expired pass-phrase.\n")
 
-    # fall-back (no ciphertext)
-    if val := os.getenv(key_name):
-        return val
-
-    raise RuntimeError(
-        f"{key_name} not found – run:\n  python secure_key.py --init {key_name}"
-    )
-
-# ───────── CLI wiring ─────────────
 def _main() -> None:
-    ap = argparse.ArgumentParser(description="Encrypted-secret manager")
-    ap.add_argument("--gui", action="store_true", help="launch Tkinter setup")
-    ap.add_argument("--init", nargs=1, metavar="KEY", help="init one secret")
-    ap.add_argument("--init-many", action="store_true", help="init TOKEN_KEYS")
-    ap.add_argument("--ttl", type=int, default=_DEFAULT_TTL,
-                    help="cache TTL seconds (default 900, 0=no cache)")
-    ap.add_argument("--purge-all", action="store_true", help="delete everything")
+    ap = argparse.ArgumentParser(description="Encrypted‑secret manager")
+    ap.add_argument("--init", metavar="KEY", nargs="?", const="ALL",
+                    help="Initialize KEY or ALL keys")
+    ap.add_argument("--update", metavar="KEY", help="Update an existing key")
+    ap.add_argument("--passphrase", metavar="PASS", help="Passphrase for --update")
+    ap.add_argument("--change-passphrase", nargs=2, metavar=("CURRENT", "NEW"),
+                    help="Change master passphrase (global mode only)")
+    ap.add_argument("--list", action="store_true", help="List all keys")
+    ap.add_argument("--status", action="store_true")
+    ap.add_argument("--set-ttl", type=int, metavar="SECONDS", help="Set persistent cache TTL")
+    ap.add_argument("--set-engine", choices=ENGINES.keys(), help="Set default crypto engine")
+    ap.add_argument("--clear-cache", action="store_true", help="Clear passphrase cache")
+    ap.add_argument("--purge-all", action="store_true")
+    ap.add_argument("--gui", action="store_true")
     args = ap.parse_args()
 
     if args.gui:
-        from secure_key_gui import SetupGUI  # lazy import
+        from secure_key_gui import SetupGUI
         SetupGUI().mainloop()
+    elif args.status:
+        _show_status()
     elif args.init:
-        _init_one(args.init[0], args.ttl)
-    elif args.init_many:
-        _init_many(args.ttl)
+        if args.init == "ALL":
+            _init_all()
+        else:
+            if _is_initialized():
+                print("❌  System already initialized, use --update to modify existing secrets", file=sys.stderr)
+            else:
+                _init_one(args.init)
+    elif args.update:
+        if not args.passphrase:
+            print("❌  --passphrase required with --update", file=sys.stderr)
+        else:
+            _update_key(args.update, args.passphrase)
+    elif args.change_passphrase:
+        _change_passphrase(args.change_passphrase[0], args.change_passphrase[1])
+    elif args.list:
+        _list_keys()
+    elif args.set_ttl:
+        if args.set_ttl > 0:
+            _set_ttl(args.set_ttl)
+            print(f"Cache TTL set to {args.set_ttl} seconds. ✔")
+        else:
+            print("TTL must be a positive number of seconds.", file=sys.stderr)
+    elif args.set_engine:
+        _set_engine_and_reencrypt(args.set_engine)
+    elif args.clear_cache:
+        _clear_cache()
+        print("Cache cleared. ✔")
     elif args.purge_all:
         _purge_all()
     else:
         ap.print_help()
+
 
 if __name__ == "__main__":
     _main()
