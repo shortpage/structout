@@ -48,7 +48,7 @@ if (rule.sourceparam === "schemaName") {
 
 Rules can be applied conditionally based on the parent type:
 
-```json
+```
 {
   "key": "additionalProperties",
   "type": "boolean",
@@ -75,7 +75,7 @@ These fields are removed recursively from the entire schema tree.
 
 The `{keynames}` placeholder automatically generates required arrays:
 
-```json
+```
 {
   "key": "required",
   "type": "array",

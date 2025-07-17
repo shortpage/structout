@@ -4,7 +4,7 @@
 
 #### 1. Create Provider Manifest
 `/src/api/newprovider.json`:
-```json
+```
 {
   "provider": "newprovider",
   "apiKey": "NEWPROVIDER_API_KEY",
@@ -29,7 +29,7 @@
 #### 2. Add to Provider Registry
 `providerRegistry.ts`:
 
-```typescript
+```python
 newprovider: {
   // SDK import
   sdkImport: "from newprovider import Client, ClientError",

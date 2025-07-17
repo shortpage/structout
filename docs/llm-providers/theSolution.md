@@ -75,7 +75,7 @@ graph TB
 
 Each provider has a JSON manifest in `/src/api/` containing:
 
-```json
+```
 {
   "provider": "openai",
   "apiKey": "OPENAI_API_KEY",
@@ -89,7 +89,7 @@ Each provider has a JSON manifest in `/src/api/` containing:
 
 Header rules define how to construct the wrapper around your schema:
 
-```typescript
+```python
 interface HeaderRuleEntry {
   key: string;                      // JSON property name
   type: "object" | "string" | "keyvalue" | "boolean" | "array";
@@ -134,7 +134,7 @@ The algorithm starts by:
 
 3. Creating an empty root object
 
-```typescript
+```python
 const ruleArray = JSON.parse(manifest.llmSchemaHeader);
 const root = {};
 const stack = [{ node: root, level: 0, nodeType: "object" }];
@@ -166,7 +166,7 @@ graph TD
 
 When a rule has `end: true`, the user's schema is injected:
 
-```typescript
+```python
 if (rule.end) {
   // This is where user schema properties are inserted
   mergeUserSchemaHere(currentNode, userSchema);

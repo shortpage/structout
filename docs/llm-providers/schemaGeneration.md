@@ -195,7 +195,7 @@ graph TB
 
 Each provider has a JSON manifest in `/src/api/` containing:
 
-```json
+```
 {
   "provider": "openai",
   "apiKey": "OPENAI_API_KEY",
@@ -209,7 +209,7 @@ Each provider has a JSON manifest in `/src/api/` containing:
 
 Header rules define how to construct the wrapper around your schema:
 
-```typescript
+```
 interface HeaderRuleEntry {
   key: string;                      // JSON property name
   type: "object" | "string" | "keyvalue" | "boolean" | "array";
@@ -254,7 +254,7 @@ The algorithm starts by:
 
 3. Creating an empty root object
 
-```typescript
+```
 const ruleArray = JSON.parse(manifest.llmSchemaHeader);
 const root = {};
 const stack = [{ node: root, level: 0, nodeType: "object" }];
@@ -286,7 +286,7 @@ graph TD
 
 When a rule has `end: true`, the user's schema is injected:
 
-```typescript
+```
 if (rule.end) {
   // This is where user schema properties are inserted
   mergeUserSchemaHere(currentNode, userSchema);
@@ -442,7 +442,7 @@ graph TB
 
 The algorithm maintains a stack to track nesting:
 
-```typescript
+```
 // Process rules by level
 for (const rule of rules) {
   // Pop stack until we're at the right level
@@ -472,7 +472,7 @@ Each rule type has specific behavior:
 
 Some rules pull values dynamically:
 
-```typescript
+```
 if (rule.sourceparam === "schemaName") {
   parent[rule.key] = schemaName;
 } else if (rule.sourceparam === "schemaDescription") {
@@ -488,7 +488,7 @@ if (rule.sourceparam === "schemaName") {
 
 Rules can be applied conditionally based on the parent type:
 
-```json
+```
 {
   "key": "additionalProperties",
   "type": "boolean",
@@ -502,7 +502,7 @@ Rules can be applied conditionally based on the parent type:
 
 Providers can exclude unsupported keywords:
 
-```json
+```
 {
   "provider": "google-gemini",
   "schemaExclude": ["additionalProperties", "patternProperties"]
@@ -515,7 +515,7 @@ These fields are removed recursively from the entire schema tree.
 
 The `{keynames}` placeholder automatically generates required arrays:
 
-```json
+```
 {
   "key": "required",
   "type": "array",

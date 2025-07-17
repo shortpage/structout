@@ -22,7 +22,7 @@ providerRegistry.ts
 
 #### OpenAI
 
-```typescript
+```python
 # Client initialization
 client = OpenAI(api_key=api_key)
 
@@ -40,7 +40,7 @@ payload = msg.parsed if msg.parsed else json.loads(msg.content)
 
 #### Anthropic
 
-```typescript
+```python
 # Client initialization
 client = Anthropic(api_key=api_key)
 
@@ -60,7 +60,7 @@ payload = tool_block.input
 
 #### Google Gemini
 
-```typescript
+```python
 # Client initialization
 client = genai.Client(api_key=api_key)
 
@@ -80,7 +80,7 @@ payload = json.loads(response.text)
 
 #### Llama
 
-```typescript
+```python
 # Client initialization
 client = LlamaAPIClient(api_key=api_key)
 
@@ -100,7 +100,7 @@ payload = json.loads(completion.completion_message.content.text)
 
 #### Grok (Uses OpenAI SDK)
 
-```typescript
+```python
 # Client initialization - Note the custom base_url
 client = OpenAI(api_key=api_key, base_url="https://api.x.ai/v1")
 
@@ -118,7 +118,7 @@ payload = msg.parsed if msg.parsed else json.loads(msg.content)
 
 #### Perplexity (Uses OpenAI SDK)
 
-```typescript
+```python
 # Client initialization - Note the custom base_url
 client = OpenAI(api_key=api_key, base_url="https://api.perplexity.ai")
 

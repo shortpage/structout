@@ -4,7 +4,7 @@
 
 Every generated `main.py` follows this structure:
 
-```typescript
+```python
 """Tiny self-contained demo ({PROVIDER} SDK)
 
 - Validates JSON output against `{schema}_schema.json`

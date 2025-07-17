@@ -4,7 +4,7 @@
 
 **Central configuration hub for all providers:**
 
-```typescript
+```python
 export const PROVIDER_META = {
   openai: {
     // SDK import statement

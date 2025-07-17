@@ -79,7 +79,7 @@ python secure_key_gui.py
 
 ### GUI Interface Overview
 
-<img src="../assets/SecureKey_GUI.jpg" alt="Secure-Key Setup GUI" width="600">
+<img src="../assets/SecureKey_GUI.jpg" alt="Secure-Key Setup GUI" width="760">
 
 The GUI provides an intuitive interface with four main sections:
 - **Passphrase Mode** - Choose between global or per-namespace security
