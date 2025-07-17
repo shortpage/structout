@@ -460,13 +460,13 @@ for (const rule of rules) {
 
 Each rule type has specific behavior:
 
-| Rule Type | Action | Example |
-|-----------|--------|---------|
-| `object` | Creates empty object | `schema: {}` |
-| `keyvalue` | Sets literal value | `strict: true` |
-| `string` | Sets string value | `name: "MySchema"` |
-| `boolean` | Sets boolean value | `additionalProperties: false` |
-| `array` | Creates array | `required: ["name", "age"]` |
+| Rule Type  | Action               | Example                       |
+|------------|----------------------|-------------------------------|
+| `object`   | Creates empty object | `schema: {}`                  |
+| `keyvalue` | Sets literal value   | `strict: true`                |
+| `string`   | Sets string value    | `name: "MySchema"`            |
+| `boolean`  | Sets boolean value   | `additionalProperties: false` |
+| `array`    | Creates array        | `required: ["name", "age"]`   |
 
 ### Dynamic Value Resolution
 
