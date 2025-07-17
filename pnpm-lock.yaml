@@ -163,6 +163,9 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
+      varvara-typedoc-theme:
+        specifier: ^0.3.6
+        version: 0.3.6(typedoc@0.28.5(typescript@5.8.3))(typescript@5.8.3)
       vite:
         specifier: ^6.3.5
         version: 6.3.5(@types/node@22.15.33)(yaml@2.8.0)
@@ -4074,6 +4077,17 @@ packages:
   v8-to-istanbul@9.3.0:
     resolution: {integrity: sha512-kiGUalWN+rgBJ/1OHZsBtU4rXZOfj/7rKQxULKlIzwzQSvMJUUNgPwJEEh7gU6xEVxC0ahoOBvN2YI8GH6FNgA==}
     engines: {node: '>=10.12.0'}
+
+  varvara-css@0.7.4:
+    resolution: {integrity: sha512-tDQz9x9jyKR7XxYQnRcaJZgXmTJBsuGwTf+4UTt9E142YLDaAihtEXnSNEvszJXjFZVTMANCsUouN8bIBK9Srw==}
+    peerDependencies:
+      typescript: ^5.0.0
+
+  varvara-typedoc-theme@0.3.6:
+    resolution: {integrity: sha512-n0SkSldusNpMnTCHDc5yC7ypaH+P5GbzN5DREmBxI/dfdwymPXkkg94qwN+gj3nIIHpwF2FxDp2+TOg/48zfcg==}
+    peerDependencies:
+      typedoc: ^0.28.0
+      typescript: ^5.0.0
 
   vfile-message@4.0.2:
     resolution: {integrity: sha512-jRDZ1IMLttGj41KcZvlrYAaI3CfqpLpfpf+Mfig13viT6NKvRzWZ+lXz0Y5D60w6uJIBAOGq9mSHf0gktF0duw==}
@@ -9082,6 +9096,16 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.25
       '@types/istanbul-lib-coverage': 2.0.6
       convert-source-map: 2.0.0
+
+  varvara-css@0.7.4(typescript@5.8.3):
+    dependencies:
+      typescript: 5.8.3
+
+  varvara-typedoc-theme@0.3.6(typedoc@0.28.5(typescript@5.8.3))(typescript@5.8.3):
+    dependencies:
+      typedoc: 0.28.5(typescript@5.8.3)
+      typescript: 5.8.3
+      varvara-css: 0.7.4(typescript@5.8.3)
 
   vfile-message@4.0.2:
     dependencies:

@@ -4,13 +4,13 @@
  * ------------------------------------------------------------------
  * File   : bundleHelpers.ts
  * Author : Sesh Ragavachari
- * Version: 2.0  (2025-06-26)
+ * Version: 2.2  (2025-07-16)
  * ------------------------------------------------------------------
  *  Assemble a **zip archive** that ships everything a user needs:
  *    • Pydantic model + demo driver (per provider & model)
- *    • Provider-specific JSON Schemas (honours schemaExclude)
+ *    • Provider‑specific JSON Schemas (honours schemaExclude)
  *    • Input / output folders ready for prompts & results
- *    • requirements.txt generated from plain-text scaffold files
+ *    • requirements.txt generated from plain‑text scaffold files
  * ------------------------------------------------------------------ */
 
 import JSZip from "jszip";
@@ -80,7 +80,7 @@ const stripWrappers = (node: unknown): unknown => {
     cur !== null &&
     (cur as MaybeWrapped).type === "json_schema" &&
     (cur as MaybeWrapped).json_schema?.schema
-  ) {
+    ) {
     cur = (cur as MaybeWrapped).json_schema!.schema;
   }
   return cur;
@@ -115,15 +115,19 @@ export async function buildZipBundle(
   const zip = new JSZip();
   const rootFolder = zip.folder(bundleId)!;
 
-  /* —— top-level Pydantic model —— */
+  // Ensure both input and output directories always exist
+  rootFolder.folder("input");
+  rootFolder.folder("output");
+
+  /* —— top‑level Pydantic model —— */
   {
     const coreSchema = fields
       ? jsonSchemaGenerator({
-          fields,
-          name: schemaId,
-          description: "",
-          headerRule: "[]",
-        })
+        fields,
+        name: schemaId,
+        description: "",
+        headerRule: "[]",
+      })
       : stripWrappers(rootObj);
 
     const { filenameModel, modelCode } = generateHelperFiles(
@@ -135,7 +139,7 @@ export async function buildZipBundle(
     rootFolder.file(filenameModel, modelCode);
   }
 
-  /* —— provider-specific bundles —— */
+  /* —— provider‑specific bundles —— */
   const usedProviders = new Set<ProviderId>();
 
   for (const provider of PROVIDERS) {
@@ -145,19 +149,19 @@ export async function buildZipBundle(
 
     const providerSchemaObj = fields
       ? jsonSchemaGenerator({
-          fields,
-          name: schemaId,
-          description: rootObj.description ?? `Schema for ${schemaId}`,
-          headerRule,
-          schemaExclude: schemaExcl,
-        })
+        fields,
+        name: schemaId,
+        description: rootObj.description ?? `Schema for ${schemaId}`,
+        headerRule,
+        schemaExclude: schemaExcl,
+      })
       : jsonSchemaGenerator({
-          baseSchema: stripWrappers(rootObj) as Record<string, unknown>,
-          name: schemaId,
-          description: rootObj.description ?? `Schema for ${schemaId}`,
-          headerRule,
-          schemaExclude: schemaExcl,
-        });
+        baseSchema: stripWrappers(rootObj) as Record<string, unknown>,
+        name: schemaId,
+        description: rootObj.description ?? `Schema for ${schemaId}`,
+        headerRule,
+        schemaExclude: schemaExcl,
+      });
 
     pFolder.file(
       `${schemaId}_schema.json`,
@@ -197,7 +201,7 @@ export async function buildZipBundle(
   return { blob, id: bundleId };
 }
 
-/* ───────────────────────────── helper add-ins ───────────────────────────── */
+/* ───────────────────────────── helper add‑ins ───────────────────────────── */
 
 function addHelperFiles(dir: JSZip): void {
   dir.file("secure_key.py", secureKeyPy);
@@ -205,8 +209,14 @@ function addHelperFiles(dir: JSZip): void {
   dir.file("constants.py", secureKeyConstPy);
 }
 
+/**
+ * Writes an example content file into the `input/` directory, if one exists in the
+ * manifest. Handles both string and string[] representations gracefully.
+ */
 function addExampleFromManifest(dir: JSZip, schemaId: string): void {
-  const txt = (exampleMap as Record<string, string>)[schemaId];
-  if (!txt) return;
+  const entry = (exampleMap as Record<string, string | string[]>)[schemaId];
+  if (!entry) return;
+
+  const txt = Array.isArray(entry) ? entry.join("\n") : entry;
   dir.folder("input")!.file(`${schemaId}_content.txt`, txt);
 }

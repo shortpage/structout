@@ -14,26 +14,38 @@ nav:
   - Guides:
       - Installation: installation.md
       - Quick Start: quick-start.md
+      - Extended Example: extended-example.md
 
   - Visual Designer:
       - Using the Designer: visualdesigner.md
       - Illustrations: visualdesigner_illustration.md
 
-  - LLM Providers:
-      - Overview: llm-providers/index.md
+  - Multi-Provider Schema:
+      - The Problem: llm-providers/theProblem.md
+      - Solution: llm-providers/theSolution.md
       - Adapters:
           - OpenAI Adapter:       llm-providers/openai.md
           - Anthropic Adapter:    llm-providers/anthropic.md
           - Gemini Adapter:       llm-providers/gemini.md
+          - Llama Adapter:        llm-providers/llama.md
           - Groq Adapter:         llm-providers/groq.md
           - Perplexity Adapter:   llm-providers/perplexity.md
+          - Schema Generation:    llm-providers/schemaGeneration.md
+      - Rule Processing: llm-providers/ruleProcessing.md
+      - Implementation Summary: llm-providers/implementationFlow.md
+
+  - LLM API Code Generation Guide:
+      - Overview: providerSnippets/overview.md
+      - Architecture: providerSnippets/architecture.md
+      - How it Works: providerSnippets/howitworks.md
+      - Core Components: providerSnippets/corecomponents.md
+      - API Snippets: providerSnippets/providerAPISnippets.md
+      - Code Structure: providerSnippets/generatedCodeStructure.md
+      - Adding New Providers: providerSnippets/addNewProviders.md
+      - Provider Configuration: providerSnippets/providerConfiguration.md
+      - Runtime Features: providerSnippets/runtimeFeatures.md
 
   - Credentials Setup: credentials-setup.md
-
-  - Examples:
-      - Overview: examples/index.md
-      - Weather Agent:               examples/weather-agent.md
-      - Bank Support Chatbot Example: examples/bank-support.md
 
   - Editor Quick Runs: editor-quick-runs.md
   - License: license.md
@@ -58,26 +70,24 @@ theme:
     - toc.follow
   palette:
     - media: "(prefers-color-scheme)"
-      primary: pink
-      accent: pink
+      primary: blue
+      accent: blue
       toggle:
         icon: material/brightness-auto
         name: "Switch to light mode"
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: pink
-      accent: pink
+      accent: blue
       toggle:
         icon: material/brightness-7
         name: "Switch to dark mode"
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: pink
-      accent: pink
+      primary: blue
+      accent: blue
       toggle:
         icon: material/brightness-4
         name: "Switch to system preference"
-  logo: img/logo-white.svg
   favicon: favicon.ico
 
 validation:
@@ -131,3 +141,4 @@ plugins:
   - mkdocs-video:   # add the new one
       is_video: true        # use <video> instead of <iframe>
       video_controls: true  # show play bar (default)
+  - mermaid2
