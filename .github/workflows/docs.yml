@@ -41,6 +41,7 @@ jobs:
       - run: |
             pip install mkdocs-material
             pip install mkdocs-video==1.5.0
+            pip install mkdocs-mermaid2-plugin
 
       # Build site & push to gh-pages
       - run: mkdocs gh-deploy --force --clean   # --clean wipes stale files
