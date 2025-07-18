@@ -47,7 +47,10 @@ nav:
 
   - Credentials Setup: credentials-setup.md
 
-  - About: license.md
+  - About:
+      - License: about/license.md
+      - Acknowledgement: about/pydantic.license.md
+      - Author: about/author.md
 
 extra:
   generator: false
