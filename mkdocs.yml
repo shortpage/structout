@@ -47,8 +47,7 @@ nav:
 
   - Credentials Setup: credentials-setup.md
 
-  - Editor Quick Runs: editor-quick-runs.md
-  - License: license.md
+  - About: license.md
 
 extra:
   generator: false
