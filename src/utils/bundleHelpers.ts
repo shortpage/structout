@@ -80,7 +80,7 @@ const stripWrappers = (node: unknown): unknown => {
     cur !== null &&
     (cur as MaybeWrapped).type === "json_schema" &&
     (cur as MaybeWrapped).json_schema?.schema
-    ) {
+  ) {
     cur = (cur as MaybeWrapped).json_schema!.schema;
   }
   return cur;
@@ -123,11 +123,11 @@ export async function buildZipBundle(
   {
     const coreSchema = fields
       ? jsonSchemaGenerator({
-        fields,
-        name: schemaId,
-        description: "",
-        headerRule: "[]",
-      })
+          fields,
+          name: schemaId,
+          description: "",
+          headerRule: "[]",
+        })
       : stripWrappers(rootObj);
 
     const { filenameModel, modelCode } = generateHelperFiles(
@@ -149,19 +149,19 @@ export async function buildZipBundle(
 
     const providerSchemaObj = fields
       ? jsonSchemaGenerator({
-        fields,
-        name: schemaId,
-        description: rootObj.description ?? `Schema for ${schemaId}`,
-        headerRule,
-        schemaExclude: schemaExcl,
-      })
+          fields,
+          name: schemaId,
+          description: rootObj.description ?? `Schema for ${schemaId}`,
+          headerRule,
+          schemaExclude: schemaExcl,
+        })
       : jsonSchemaGenerator({
-        baseSchema: stripWrappers(rootObj) as Record<string, unknown>,
-        name: schemaId,
-        description: rootObj.description ?? `Schema for ${schemaId}`,
-        headerRule,
-        schemaExclude: schemaExcl,
-      });
+          baseSchema: stripWrappers(rootObj) as Record<string, unknown>,
+          name: schemaId,
+          description: rootObj.description ?? `Schema for ${schemaId}`,
+          headerRule,
+          schemaExclude: schemaExcl,
+        });
 
     pFolder.file(
       `${schemaId}_schema.json`,
