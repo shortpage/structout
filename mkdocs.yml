@@ -30,7 +30,6 @@ nav:
           - Llama Adapter:        llm-providers/llama.md
           - Groq Adapter:         llm-providers/groq.md
           - Perplexity Adapter:   llm-providers/perplexity.md
-          - Schema Generation:    llm-providers/schemaGeneration.md
       - Rule Processing: llm-providers/ruleProcessing.md
       - Implementation Summary: llm-providers/implementationFlow.md
 
