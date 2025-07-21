@@ -3,22 +3,21 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+
   "scripts": {
     "dev": "vite",
     "tauri:dev": "tauri dev",
     "build:tauri": "tauri build",
-    "build:web": "tsc && vite build",
-    "preview:web": "vite preview --base /structout/",
-    "build:demo": "set \"NODE_PATH=\" && vite build --mode demo",
-    "preview:demo": "set \"NODE_PATH=\" && vite preview --mode demo --base /structout/",
-    "build": "pnpm build:web",
-    "preview": "pnpm preview:web",
-    "predeploy": "pnpm build:web",
-    "deploy": "gh-pages -d dist --nojekyll --dotfiles",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "deploy": "pnpm run build && pnpm dlx wrangler pages deploy dist --project-name structout",
+    "docs:build": "mkdocs build --clean",
+    "docs:deploy": "mkdocs gh-deploy --force",
     "sec:js": "npm audit --production && npx snyk test || true",
     "sec:rust": "cd src-tauri && cargo audit -q && cargo geiger -q",
     "sec:code": "npx semgrep --config \"p/tslint-security\"",
     "sec": "npm run sec:js && npm run sec:rust && npm run sec:code",
+
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --check .",
     "prune:exports": "ts-prune > ts-prune.txt",
@@ -32,6 +31,7 @@
     "jest:watch": "jest --watch",
     "tauri": "tauri"
   },
+
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
@@ -54,6 +54,7 @@
     "styled-components": "^6.1.18",
     "uuid": "^11.1.0"
   },
+
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250620.0",
     "@tauri-apps/cli": "^2.5.0",
@@ -94,6 +95,7 @@
     "vite-tsconfig-paths": "^4.3.0",
     "vitest": "^3.2.2"
   },
+
   "overrides": {
     "prismjs": "^1.29.0",
     "glob": "^10.3.10",
@@ -109,5 +111,6 @@
       "prismjs": "^1.30.0"
     }
   },
+
   "packageManager": "pnpm@9.3.0"
 }

@@ -1,56 +1,40 @@
 /* ------------------------------------------------------------------
  * MIT License
- * Copyright (c) 2025 Sesh Ragavachari
- * … (rest of header unchanged) …
+ * Copyright (c) 2025 Sesh Ragavachari
  * ------------------------------------------------------------------ */
 
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import path from "node:path"; // <‑‑ NEW: used for alias
-
-/*─────────────────────────────────────────────────────────────────────
- * Adjust **ONLY** this constant if your repo slug ever changes
- *───────────────────────────────────────────────────────────────────*/
-const REPO_NAME = "structout";
+import path from "node:path";
 
 export default defineConfig(({ command }) => {
-  /* ── Build‑context helpers ───────────────────────────────────────*/
-  const isDev = command === "serve";
-  const tauriPort = Number(process.env.TAURI_DEV_PORT || 1420);
-  const forTauri = Boolean(process.env.TAURI_PLATFORM);
+  /* ── Build‑context helpers ───────────────────────────────────── */
+  const forTauri   = Boolean(process.env.TAURI_PLATFORM);
+  const isDev      = command === "serve";
+  const tauriPort  = Number(process.env.TAURI_DEV_PORT || 1420);
 
-  /* ── Core Vite config ────────────────────────────────────────────*/
   return {
     plugins: [react()],
 
-    /*--------------------------------------------------------------
-     * 1.  Alias so "@/..." maps to "<repo>/src/…"
-     *     – works for both JS runtime & TypeScript
-     *-------------------------------------------------------------*/
+    /* 1 — Alias "@/..." → "<repo>/src/…" */
     resolve: {
-      alias: {
-        "@": path.resolve(__dirname, "./src"),
-      },
-      /* Keep Emotion dedupe */
+      alias: { "@": path.resolve(__dirname, "./src") },
       dedupe: ["@emotion/react", "@emotion/styled"],
     },
 
-    /*--------------------------------------------------------------
-     * 2.  Dev‑server ports
-     *-------------------------------------------------------------*/
+    /* 2 — Dev‑server ports */
     server: {
       port: isDev ? tauriPort : 5173,
       strictPort: true,
     },
 
-    /*--------------------------------------------------------------
-     * 3.  Base path logic:  GitHub Pages vs Tauri vs local dev
-     *-------------------------------------------------------------*/
-    base: command === "build" ? (forTauri ? "./" : `/${REPO_NAME}/`) : "/",
+    /* 3 — Base path
+          •  Tauri desktop build ….. "./"
+          •  All web builds ………….. "/"   (works on Cloudflare Pages)
+    -----------------------------------------------------------------*/
+    base: forTauri ? "./" : "/",
 
-    /*--------------------------------------------------------------
-     * 4.  Build targets + Rollup chunk naming
-     *-------------------------------------------------------------*/
+    /* 4 — Build targets & chunk naming */
     build: {
       target: "es2020",
       chunkSizeWarningLimit: 2500,

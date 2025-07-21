@@ -1,9 +1,26 @@
-name               = "structout"
-main               = "src/worker.ts"
-compatibility_date = "2025-06-19"
+name              = "structout"
+compatibility_date = "2025-07-21"
 
+##############################
+#  Worker entry (optional)   #
+##############################
+# If you have API routes in  #
+# src/worker.ts keep this.   #
+# If the app is 100 % static #
+# you can delete the [main]  #
+# line entirely.             #
+##############################
+main = "src/worker.ts"
+
+##############################
+#  Static assets (Vite)      #
+##############################
 [assets]
-directory = "./dist"        # Vite build output
+directory = "./dist"     # Vite build output
+binding   = "ASSETS"
 
+##############################
+#  Build command Pages runs  #
+##############################
 [build]
-command  = "pnpm run build"
+command = "pnpm run build"  # calls tsc && vite build
