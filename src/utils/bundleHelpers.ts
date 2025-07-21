@@ -17,7 +17,7 @@ import JSZip from "jszip";
 import secureKeyPy from "../scaffolds/secure_key_py.txt?raw";
 import secureKeyGuiPy from "../scaffolds/secure_key_gui_py.txt?raw";
 import secureKeyConstPy from "../scaffolds/constants_py.txt?raw";
-import exampleMap from "../examples/exampleManifest.json" assert { type: "json" };
+import exampleMap from "../assets/manifests/examples.manifest.json" assert { type: "json" };
 import baseReq from "../scaffolds/requirements/base.txt?raw";
 import openaiReq from "../scaffolds/requirements/openai.txt?raw";
 import anthropicReq from "../scaffolds/requirements/anthropic.txt?raw";

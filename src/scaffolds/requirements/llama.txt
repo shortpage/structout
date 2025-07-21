@@ -1,1 +1,1 @@
-llama-api-client>=0.4
+llama-api-client>=0.1

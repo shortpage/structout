@@ -51,6 +51,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import BadgeLinks from "./components/BadgeLinks";
 
 import SchemaDesigner, {
   SchemaDesignerHandle,
@@ -159,23 +160,38 @@ const Workbench: React.FC = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Root>
-        {/* header -------------------------------------------------- */}
+        {/* ─────── Header ───────────────────────────────────────────── */}
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
+            alignItems: "flex-start", // stack rows on the right
+            justifyContent: "space-between", // keep brand on the left
             padding: "12px 24px",
             borderBottom: "1px solid #e5e7eb",
+            flexWrap: "wrap", // allow small screens to wrap
           }}
         >
-          <BrandWrap>
+          {/* Brand (left) */}
+          <BrandWrap style={{ flex: "0 0 auto" }}>
             <BrandName>
               Struct<span>Out</span>
             </BrandName>
             <TagLine>Structured Output Designer for LLM APIs</TagLine>
           </BrandWrap>
-          {SHOW_HEADER_LINKS && <LegalLinks />}
+
+          {/* Legal links + badges (right, stacked) */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end", // right‑align both rows
+              gap: "4px",
+              flex: "0 0 auto",
+            }}
+          >
+            {SHOW_HEADER_LINKS && <LegalLinks />}
+            <BadgeLinks />
+          </div>
         </div>
 
         {/* workspace ---------------------------------------------- */}

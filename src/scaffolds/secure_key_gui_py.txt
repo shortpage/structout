@@ -1,4 +1,58 @@
 #!/usr/bin/env python3
+# ------------------------------------------------------------------
+# MIT License
+# Copyright (c) 2025  Sesh Ragavachari
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the “Software”), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify,
+# merge, publish, distribute, sublicense, and/or sell copies of the
+# Software, and to permit persons to whom the Software is furnished
+# to do so, subject to the following conditions:
+#
+# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+# ------------------------------------------------------------------
+#
+# File   : secure_key_gui.py
+# Author : Sesh Ragavachari
+# Date   : 2025-07-16
+# Version: 1.0
+#
+# Purpose
+#   Tk-based GUI wrapper for secure_key.py that lets users:
+#     • Choose **global** or **per-namespace** passphrase mode
+#     • Store / rotate API-key secrets in the OS keyring
+#     • Configure cache-TTL & default encryption engine
+#     • Purge all secrets + config with a single action
+#
+# Feature highlights
+#   • Passphrase mode is persisted & becomes immutable after first save
+#   • Inline rotation UI (no modal pop-ups) with strength meter
+#   • Dynamic form – shows per-namespace passphrase boxes only when needed
+#   • Diagnostics banner prints Python / cryptography versions at start-up
+#   • High-z-index Joyride tour guides first-time users through the workbench
+#
+# State snapshot
+#   • mode_var        – "global" | "local" passphrase mode
+#   • inputs          – secret-entry widgets keyed by API var name
+#   • pw_inputs       – per-namespace passphrase widgets (local mode)
+#   • rotate_var      – bool, toggles master passphrase rotation UI
+#   • ttl_var         – cache-TTL (seconds) for in-process key cache
+#   • engine_box      – chosen encryption engine (Argon2id/AES-GCM, etc.)
+#
+# Control flow
+#   User actions → _update_ui_state() → enables/disables buttons
+#                → save() | save_configuration() | purge()
+# ------------------------------------------------------------------
+#!/usr/bin/env python3
 """
 secure_key_gui.py — graphical helper for secure_key.py   (2025-07-16)
 

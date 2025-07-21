@@ -75,6 +75,8 @@ import {
   ModelKey,
 } from "./utils/providerRegistry";
 import { buildZipBundle } from "./utils/bundleHelpers";
+import { LegalDownloadDialog } from "./components/LegalDownloadDialog";
+import { LEGAL_POPUP_EVERY_DOWNLOAD } from "./lib/constants";
 
 /* ---------- view modes (examples removed) ---------------------- */
 type ViewMode = "schema" | "helper:model" | "helper:main";
@@ -109,7 +111,6 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
   const [copied, setCopied] = useState(false);
   const [view, setView] = useState<ViewMode>("schema");
   const [blob, setBlob] = useState("");
-  const [, setLang] = useState<"json" | "python">("json");
   const [, setHelpers] = useState<HelperFiles | null>(null);
   const [toast, setToast] = useState<string | undefined>();
 
@@ -121,6 +122,11 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
           ? "1"
           : "0")) === "1",
   );
+
+  const [dlgOpen, setDlgOpen] = useState(false);
+
+  /** show checkbox only if the user is *allowed* to dismiss */
+  const showCheckbox = !LEGAL_POPUP_EVERY_DOWNLOAD;
 
   const codeBase = {
     borderRadius: 4,
@@ -151,7 +157,6 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
     setModelKey(PROVIDER_META[llmProvider].defaultModel);
     setView("schema");
     setBlob("");
-    setLang("json");
   }, [llmProvider]);
 
   /* schema regeneration reset ------------------------------------ */
@@ -159,7 +164,6 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
     setHelpers(null);
     setView("schema");
     setBlob("");
-    setLang("json");
   }, [jsonSchema]);
 
   /* live-refresh helper code when modelKey changes ---------------- */
@@ -168,7 +172,6 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
     const f = generateHelperFiles(jsonSchema, llmProvider, modelKey);
     setHelpers(f);
     setBlob(view === "helper:model" ? f.modelCode : f.mainCode);
-    setLang("python");
   }, [modelKey, jsonSchema, llmProvider, view]);
 
   /* ---------- helpers (IDE code) ------------------------------- */
@@ -178,7 +181,6 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
       const f = generateHelperFiles(jsonSchema, llmProvider, modelKey);
       setHelpers(f);
       setBlob(which === "model" ? f.modelCode : f.mainCode);
-      setLang("python");
       setView(`helper:${which}` as ViewMode);
     },
     [jsonSchema, llmProvider, modelKey],
@@ -220,7 +222,33 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
     }
   };
 
-  const download = async () => {
+  // ─────────────────────────────────────────────────────────────
+  // Download‑button click handler
+  // • If LEGAL_POPUP_EVERY_DOWNLOAD is true  → always show dialog (no checkbox)
+  // • Otherwise                            → show dialog unless user opted out
+  // ─────────────────────────────────────────────────────────────
+  // Download‑button click handler
+  const startDownload = () => {
+    /* 1⃣  Global override – always gate with dialog (checkbox hidden) */
+    if (LEGAL_POPUP_EVERY_DOWNLOAD) {
+      setDlgOpen(true);
+      return;
+    }
+    /* 2⃣  Normal mode – honour per‑user opt‑out flag */
+    const userOptedOut = localStorage.getItem("structout.legalSkip") === "yes";
+    console.log("Legal Skip is:", userOptedOut);
+    console.log(
+      "Legal Skip Value",
+      localStorage.getItem("structout.legalSkip"),
+    );
+    if (userOptedOut) {
+      void doDownload(); // skip dialog
+    } else {
+      setDlgOpen(true); // show dialog with checkbox
+    }
+  };
+
+  const doDownload = async () => {
     if (!jsonSchema) return;
     try {
       const { blob: zipBlob, id } = await buildZipBundle(
@@ -239,6 +267,12 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
       console.error(err);
       setToast("ZIP generation failed – see console.");
     }
+  };
+
+  const handleAccept = (dontRepeat: boolean) => {
+    if (dontRepeat) localStorage.setItem("structout.legalSkip", "yes");
+    setDlgOpen(false);
+    void doDownload();
   };
 
   /* --------------------------- render --------------------------- */
@@ -309,7 +343,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
             <IconButton
               size="small"
               disabled={!jsonSchema}
-              onClick={download}
+              onClick={startDownload}
               sx={{ ml: 0.5 }}
               id="btn-download"
             >
@@ -439,6 +473,13 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
           {toast}
         </Alert>
       </Snackbar>
+      {/* legal popup -------------------------------------------------- */}
+      <LegalDownloadDialog
+        open={dlgOpen}
+        showCheckbox={showCheckbox} // ← new prop
+        onAccept={handleAccept}
+        onCancel={() => setDlgOpen(false)}
+      />
     </PanelRoot>
   );
 };

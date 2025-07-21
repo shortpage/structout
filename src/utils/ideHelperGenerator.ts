@@ -29,7 +29,7 @@
  *    2️⃣ <id>_main.py  – Self‑contained demo that calls the model
  *       provider, validates the response, and saves artefacts.
 
- *  Keep *all* provider quirks behind a small `ADAPTERS` table so the
+ *  Keep *all* provider specifics behind a small `ADAPTERS` table so the
  *  core logic (schema → Pydantic → Python snippet) is identical for
  *  every vendor.  The adapters only need two lambdas: `getName` and
  *  `getSchema`.

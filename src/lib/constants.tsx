@@ -86,3 +86,4 @@ export const EXAMPLE_ENABLED = true;
 // constants.ts
 export const DEMO_READ_ONLY = import.meta.env.VITE_DEMO_READ_ONLY === "1";
 export const SHOW_TOUR = import.meta.env.VITE_SHOW_TOUR === "1";
+export const LEGAL_POPUP_EVERY_DOWNLOAD = false;

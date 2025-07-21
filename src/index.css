@@ -1,100 +1,148 @@
-/* ------------------------------------------------------------------
- * MIT License
- * Copyright (c) 2025  Sesh Ragavachari
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the “Software”), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify,
- * merge, publish, distribute, sublicense, and/or sell copies of the
- * Software, and to permit persons to whom the Software is furnished
- * to do so, subject to the following conditions:
- *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- * ------------------------------------------------------------------
- * File   : index.css
- * Author : Sesh Ragavachari
- * Date   : 2025-06-09
- * Version: 1.0
- *
- * Purpose
- *  Global CSS reset and colour-scheme baseline used by Vite’s default
- *  template.  Feel free to customise or replace entirely once your
- *  application design system is in place.
- * ------------------------------------------------------------------ */
+/* ================================================================
+   LEGAL DOWNLOAD DIALOG — POLISHED LOOK‑AND‑FEEL
+   (drop at the bottom of index.css or in a dedicated dialog css)
+   ================================================================= */
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  /* brand palette – tweak to taste */
+  --dlg-bg-light: #fafafa;
+  --dlg-bg-dark : #1f1f1f;
+  --dlg-shadow  : 0 10px 32px rgba(0,0,0,.35);
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  --accent      : #1976d2;
+  --accent-hover: #1565c0;
+  --warn-text   : #d32f2f;
+  --warn-bg     : #ffebee;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --disc-light  : #fffbea;
+  --disc-dark   : #2d2d1f;
+  --disc-border : #ffb300;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+/* ---------- shell ------------------------------------------------ */
+dialog.legal-dialog {
+  max-width: 720px;
+  max-height: 80vh;
+  padding: 2.25rem 2.5rem;
+  border: none;
+  border-radius: 12px;
+  background: var(--dlg-bg-light);
+  box-shadow: var(--dlg-shadow);
+  overflow-y: auto;
+  font-family: system-ui, sans-serif;
 }
 
-body {
-  margin: 0;
+@media (prefers-color-scheme: dark) {
+  dialog.legal-dialog { background: var(--dlg-bg-dark); color: #e5e5e5; }
+}
+
+dialog.legal-dialog::backdrop {
+  background: rgba(0 0 0 / .45);
+}
+
+/* ---------- type hierarchy --------------------------------------- */
+dialog.legal-dialog h2 {
+  margin: 0 0 1.25rem 0;
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+
+dialog.legal-dialog h3 {
+  margin: 1.85rem 0 .85rem 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+/* ---------- disclaimer panels ------------------------------------ */
+.disclaimer {
+  margin: 1.35rem 0;
+  padding: 1rem 1.25rem;
+  background: var(--disc-light);
+  border-left: 4px solid var(--disc-border);
+  border-radius: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .disclaimer { background: var(--disc-dark); }
+}
+
+.disclaimer ul {
+  margin: .5rem 0;
+  padding-left: 1.35rem;
+  line-height: 1.45;
+}
+
+.disclaimer li { margin: .45rem 0; }
+
+/* ---------- MIT license block ----------------------------------- */
+pre.license {
+  max-height: 14rem;
+  overflow: auto;
+  background: #f1f1f1;
+  padding: 1rem;
+  border-radius: 6px;
+  font-size: .78rem;
+  white-space: pre-wrap;
+}
+@media (prefers-color-scheme: dark) { pre.license { background: #282828; } }
+
+/* ---------- warning banner -------------------------------------- */
+.final {
+  margin: 1.65rem 0 .8rem 0;
+  padding: .9rem 1rem;
+  background: var(--warn-bg);
+  border: 2px solid var(--warn-text);
+  border-radius: 6px;
+  text-align: center;
+  color: var(--warn-text);
+  font-weight: 600;
+}
+
+/* ---------- “don’t repeat” checkbox ----------------------------- */
+.dont-repeat {
   display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  align-items: center;
+  gap: .55rem;
+  margin: 1rem 0 .6rem 0;
+  font-size: .9rem;
+  user-select: none;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* ---------- action row ------------------------------------------ */
+dialog.legal-dialog menu {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1.1rem;
+  margin-top: 1.7rem;
+  padding: 0;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+dialog.legal-dialog menu button {
+  appearance: none;          /* reset default */
+  border: none;
+  border-radius: 6px;
+  padding: .65rem 1.6rem;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  transition: background .2s, opacity .15s;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* primary / cancel variants */
+dialog.legal-dialog button.primary {
+  background: var(--accent);
+  color: #fff;
+}
+dialog.legal-dialog button.primary:hover { background: var(--accent-hover); }
+
+dialog.legal-dialog button.cancel {
+  background: #e0e0e0;
+  color: #424242;
+}
+dialog.legal-dialog button.cancel:hover { opacity: .88; }
+
+/* fine‑tune focus outline */
+dialog.legal-dialog button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }

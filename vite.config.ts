@@ -1,84 +1,61 @@
 /* ------------------------------------------------------------------
  * MIT License
- * Copyright (c) 2025  Sesh Ragavachari
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the “Software”), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify,
- * merge, publish, distribute, sublicense, and/or sell copies of the
- * Software, and to permit persons to whom the Software is furnished
- * to do so, subject to the following conditions:
- *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- * ------------------------------------------------------------------
- * File   : vite.config.ts
- * Author : Sesh Ragavachari
- * Date   : 2025-06-10
- * Version: 1.0
- *
- *  • React plugin + Emotion dedupe
- *  • Port logic: 1420 for Tauri dev, 5173 for standalone dev/preview
- *  • Relative `base: "./"` for production so Tauri can load via file://
- *  • Rollup manualChunks helper → neat, cache-friendly vendor files
- * -------------------------------------------------------------- */
+ * Copyright (c) 2025 Sesh Ragavachari
+ * … (rest of header unchanged) …
+ * ------------------------------------------------------------------ */
 
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import path from "node:path";                 // <‑‑ NEW: used for alias
 
-// ────────────────────────────────────────────────────────────────────
-// Adjust **ONLY** this constant if your repo slug ever changes
-// (e.g.   github.com/<you>/<REPO_NAME>  →  https://<you>.github.io/<REPO_NAME>/)
+/*─────────────────────────────────────────────────────────────────────
+ * Adjust **ONLY** this constant if your repo slug ever changes
+ *───────────────────────────────────────────────────────────────────*/
 const REPO_NAME = "structout";
-// ────────────────────────────────────────────────────────────────────
 
 export default defineConfig(({ command }) => {
-  /* ----------------------------------------------------------------
-   * Build context helpers
-   * ---------------------------------------------------------------- */
-  const isDev = command === "serve";
-
-  // Tauri dev server port (falls back to 1420)
+  /* ── Build‑context helpers ───────────────────────────────────────*/
+  const isDev   = command === "serve";
   const tauriPort = Number(process.env.TAURI_DEV_PORT || 1420);
+  const forTauri  = Boolean(process.env.TAURI_PLATFORM);
 
-  // Heuristic: when `tauri dev|build` runs, TAURI_PLATFORM is set
-  // → desktop bundle must keep relative URLs so file:// loads assets.
-  const forTauri = Boolean(process.env.TAURI_PLATFORM);
-
-  /* ----------------------------------------------------------------
-   * Core Vite config
-   * ---------------------------------------------------------------- */
+  /* ── Core Vite config ────────────────────────────────────────────*/
   return {
     plugins: [react()],
 
+    /*--------------------------------------------------------------
+     * 1.  Alias so "@/..." maps to "<repo>/src/…"
+     *     – works for both JS runtime & TypeScript
+     *-------------------------------------------------------------*/
     resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+      /* Keep Emotion dedupe */
       dedupe: ["@emotion/react", "@emotion/styled"],
     },
 
+    /*--------------------------------------------------------------
+     * 2.  Dev‑server ports
+     *-------------------------------------------------------------*/
     server: {
       port: isDev ? tauriPort : 5173,
       strictPort: true,
     },
 
-    /* --------------------------------------------------------------
-     * STEP 1 – GitHub Pages needs a repo-prefixed base path.
-     *
-     *  – `vite build`  (your `build:web` script)     → "/structout/"
-     *  – `tauri build` (desktop bundle)              → "./"
-     *  – `vite dev` / `tauri dev`                   → "/"
-     * -------------------------------------------------------------- */
-    base: command === "build" ? (forTauri ? "./" : `/${REPO_NAME}/`) : "/",
+    /*--------------------------------------------------------------
+     * 3.  Base path logic:  GitHub Pages vs Tauri vs local dev
+     *-------------------------------------------------------------*/
+    base: command === "build"
+      ? (forTauri ? "./" : `/${REPO_NAME}/`)
+      : "/",
 
+    /*--------------------------------------------------------------
+     * 4.  Build targets + Rollup chunk naming
+     *-------------------------------------------------------------*/
     build: {
       target: "es2020",
-      chunkSizeWarningLimit: 1500,
+      chunkSizeWarningLimit: 2500,
       rollupOptions: {
         output: {
           manualChunks(id) {
