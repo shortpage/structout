@@ -6,7 +6,7 @@
 
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import path from "node:path";                 // <‑‑ NEW: used for alias
+import path from "node:path"; // <‑‑ NEW: used for alias
 
 /*─────────────────────────────────────────────────────────────────────
  * Adjust **ONLY** this constant if your repo slug ever changes
@@ -15,9 +15,9 @@ const REPO_NAME = "structout";
 
 export default defineConfig(({ command }) => {
   /* ── Build‑context helpers ───────────────────────────────────────*/
-  const isDev   = command === "serve";
+  const isDev = command === "serve";
   const tauriPort = Number(process.env.TAURI_DEV_PORT || 1420);
-  const forTauri  = Boolean(process.env.TAURI_PLATFORM);
+  const forTauri = Boolean(process.env.TAURI_PLATFORM);
 
   /* ── Core Vite config ────────────────────────────────────────────*/
   return {
@@ -46,9 +46,7 @@ export default defineConfig(({ command }) => {
     /*--------------------------------------------------------------
      * 3.  Base path logic:  GitHub Pages vs Tauri vs local dev
      *-------------------------------------------------------------*/
-    base: command === "build"
-      ? (forTauri ? "./" : `/${REPO_NAME}/`)
-      : "/",
+    base: command === "build" ? (forTauri ? "./" : `/${REPO_NAME}/`) : "/",
 
     /*--------------------------------------------------------------
      * 4.  Build targets + Rollup chunk naming
