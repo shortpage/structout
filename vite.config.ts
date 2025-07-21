@@ -9,9 +9,9 @@ import path from "node:path";
 
 export default defineConfig(({ command }) => {
   /* ── Build‑context helpers ───────────────────────────────────── */
-  const forTauri   = Boolean(process.env.TAURI_PLATFORM);
-  const isDev      = command === "serve";
-  const tauriPort  = Number(process.env.TAURI_DEV_PORT || 1420);
+  const forTauri = Boolean(process.env.TAURI_PLATFORM);
+  const isDev = command === "serve";
+  const tauriPort = Number(process.env.TAURI_DEV_PORT || 1420);
 
   return {
     plugins: [react()],
