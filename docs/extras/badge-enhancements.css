@@ -1,0 +1,89 @@
+/* Enhanced badge styling - Optional */
+.badge-strip {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.badge-strip a {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.badge-strip a:hover {
+  transform: translateY(-1px);
+  opacity: 0.9;
+}
+
+.badge-strip img {
+  border-radius: 3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Animation on page load */
+.badge-strip a {
+  animation: fadeInUp 0.6s ease-out backwards;
+}
+
+.badge-strip a:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.badge-strip a:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Add this to your mkdocs.yml extra_css or in the template styles block */
+
+/* Preload badge images to prevent loading flicker */
+.badge-strip img {
+  /* Force browser to cache images immediately */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+
+  /* Smooth transitions */
+  transition: all 0.2s ease;
+
+  /* Prevent layout shift during load */
+  width: auto;
+  height: 20px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Fade in animation for smoother appearance */
+.badge-strip {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Reduce content jump during navigation */
+.md-content {
+  transition: margin-top 0.2s ease;
+}
+
+/* Preload hover states */
+.badge-strip a:hover img {
+  opacity: 0.8;
+  transform: translateY(-1px);
+}

@@ -4,7 +4,7 @@ strict: true
 site_url: https://ai.structout.dev          # update later
 
 repo_name: seshragav/structout
-repo_url: https://github.com/seshragav/structout
+repo_url: https://github.com/shortpage/structout
 edit_uri: edit/main/docs/
 copyright: © Sesh Ragavachari 2025-present
 
@@ -56,6 +56,7 @@ extra:
 
 theme:
   name: material
+  custom_dir: overrides
   features:
     - navigation.expand
     - navigation.path
@@ -98,14 +99,12 @@ validation:
   anchors: warn
 
 extra_css:
-  - extra/tweaks.css
-  - extra/nav-tweaks.css      # smaller font on nested links
+  - extras/nav-tweaks.css      # smaller font on nested links
+  - extras/badge-enhancements.css
 
 extra_javascript:
-  - /flarelytics/client.js
   - https://cdn.jsdelivr.net/npm/algoliasearch@5.20.0/dist/lite/builds/browser.umd.js
   - https://cdn.jsdelivr.net/npm/instantsearch.js@4.77.3/dist/instantsearch.production.min.js
-  - /javascripts/algolia-search.js
 
 markdown_extensions:
   - tables
