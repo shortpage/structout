@@ -3,7 +3,7 @@ site_description: Interactive JSON-Schema workbench for LLMs—design, validate 
 strict: true
 site_url: https://ai.structout.dev          # update later
 
-repo_name: seshragav/structout
+repo_name: shortpage/structout
 repo_url: https://github.com/shortpage/structout
 edit_uri: edit/main/docs/
 copyright: © Sesh Ragavachari 2025-present
