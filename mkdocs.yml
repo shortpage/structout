@@ -56,7 +56,7 @@ extra:
 
 theme:
   name: material
-  custom_dir: ../overrides
+  custom_dir: overrides
   features:
     - navigation.expand
     - navigation.path
