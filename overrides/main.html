@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block header %}
+{{ super() }}
+<!-- Badge Strip - Outside content block to prevent reload flicker -->
+<div class="badge-strip" style="
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: right;
+  padding: 12px 16px;
+  margin: 0 16px;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
+  background: var(--md-default-bg-color, #ffffff);
+  position: relative;
+  z-index: 5;
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
+">
+  <!-- CI Status Badge -->
+  <a href="https://github.com/shortpage/structout/actions"
+     target="_blank"
+     rel="noopener noreferrer"
+     style="line-height: 0;">
+    <img src="https://img.shields.io/github/actions/workflow/status/shortpage/structout/ci.yml?label=CI&logo=github&logoColor=white"
+         alt="CI status"
+         height="20"
+         style="transition: opacity 0.2s ease;">
+  </a>
+
+  <!-- MIT License Badge -->
+  <a href="https://github.com/shortpage/structout/blob/main/LICENSES/LICENSE"
+     target="_blank"
+     rel="noopener noreferrer"
+     style="line-height: 0;">
+    <img src="https://img.shields.io/badge/license-MIT-green.svg"
+         alt="MIT licence"
+         height="20"
+         style="transition: opacity 0.2s ease;">
+  </a>
+
+  <!-- Slack Invite Badge -->
+  <a href="https://join.slack.com/t/structout/shared_invite/XXXXXXXX"
+     target="_blank"
+     rel="noopener noreferrer"
+     style="line-height: 0;">
+    <img src="https://img.shields.io/badge/Slack-Join%20Slack-4A154B?logo=slack&logoColor=white"
+         alt="Join our Slack"
+         height="20"
+         style="transition: opacity 0.2s ease;">
+  </a>
+</div>
+{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+  /* Badge hover effects */
+  .badge-strip img:hover {
+    opacity: 0.8;
+  }
+
+  /* Dark mode support */
+  [data-md-color-scheme="slate"] .badge-strip {
+    background: var(--md-default-bg-color);
+    border-bottom-color: var(--md-default-fg-color--lightest);
+  }
+
+  /* Responsive adjustments */
+  @media screen and (max-width: 768px) {
+    .badge-strip {
+      padding: 8px 16px;
+      gap: 4px;
+    }
+  }
+
+  /* Smooth positioning */
+  .md-main__inner {
+    margin-top: 0;
+  }
+</style>
+{% endblock %}
