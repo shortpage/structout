@@ -1,53 +1,79 @@
+{# ------------------------------------------------------------------
+MIT License
+Copyright (c) 2025  Sesh Ragavachari
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify,
+merge, publish, distribute, sublicense, and/or sell copies of the
+Software, and to permit persons to whom the Software is furnished
+to do so, subject to the following conditions:
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------
+File   : main.html  (MkDocs Material override)
+Author : Sesh Ragavachari
+Date   : 2025‑06‑09
+Version: 1.1
+
+• Adds a badge strip to the header (CI, MIT, Slack, Docs)
+• Badges use shields.io SVGs; no JS required
+• Dark‑mode aware; fades in smoothly
+------------------------------------------------------------------ #}
+
 {% extends "base.html" %}
 
 {% block header %}
 {{ super() }}
-<!-- Badge Strip - Outside content block to prevent reload flicker -->
-<div class="badge-strip" style="
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: right;
-  padding: 12px 16px;
-  margin: 0 16px;
-  border-bottom: 1px solid var(--md-default-fg-color--lightest, #e0e0e0);
-  background: var(--md-default-bg-color, #ffffff);
-  position: relative;
-  z-index: 5;
-  max-width: calc(100% - 32px);
-  box-sizing: border-box;
-">
-  <!-- CI Status Badge -->
+<!-- Badge Strip -->
+<div class="badge-strip"
+     style="
+         display:flex;
+         gap:6px;
+         flex-wrap:wrap;
+         justify-content:right;
+         padding:12px 16px;
+         margin:0 16px;
+         border-bottom:1px solid var(--md-default-fg-color--lightest,#e0e0e0);
+         background:var(--md-default-bg-color,#ffffff);
+         position:relative;
+         z-index:5;
+         max-width:calc(100% - 32px);
+         box-sizing:border-box;">
+  <!-- CI Status -->
   <a href="https://github.com/shortpage/structout/actions"
-     target="_blank"
-     rel="noopener noreferrer"
-     style="line-height: 0;">
+     target="_blank" rel="noopener noreferrer" style="line-height:0">
     <img src="https://img.shields.io/github/actions/workflow/status/shortpage/structout/ci.yml?label=CI&logo=github&logoColor=white"
-         alt="CI status"
-         height="20"
-         style="transition: opacity 0.2s ease;">
+         alt="CI status" height="20" style="transition:opacity .2s ease">
   </a>
 
-  <!-- MIT License Badge -->
+  <!-- MIT Licence -->
   <a href="https://github.com/shortpage/structout/blob/main/LICENSES/LICENSE"
-     target="_blank"
-     rel="noopener noreferrer"
-     style="line-height: 0;">
+     target="_blank" rel="noopener noreferrer" style="line-height:0">
     <img src="https://img.shields.io/badge/license-MIT-green.svg"
-         alt="MIT licence"
-         height="20"
-         style="transition: opacity 0.2s ease;">
+         alt="MIT licence" height="20" style="transition:opacity .2s ease">
   </a>
 
-  <!-- Slack Invite Badge -->
+  <!-- Slack Invite -->
   <a href="https://join.slack.com/t/structout/shared_invite/XXXXXXXX"
-     target="_blank"
-     rel="noopener noreferrer"
-     style="line-height: 0;">
+     target="_blank" rel="noopener noreferrer" style="line-height:0">
     <img src="https://img.shields.io/badge/Slack-Join%20Slack-4A154B?logo=slack&logoColor=white"
-         alt="Join our Slack"
-         height="20"
-         style="transition: opacity 0.2s ease;">
+         alt="Join our Slack" height="20" style="transition:opacity .2s ease">
+  </a>
+
+  <!-- Documentation (MkDocs) -->
+  <a href="https://docs.structout.dev"
+     target="_blank" rel="noopener noreferrer" style="line-height:0">
+    <img src="https://img.shields.io/badge/MkDocs-blue"
+         alt="Project documentation" height="20" style="transition:opacity .2s ease">
   </a>
 </div>
 {% endblock %}
@@ -55,28 +81,21 @@
 {% block styles %}
 {{ super() }}
 <style>
-  /* Badge hover effects */
-  .badge-strip img:hover {
-    opacity: 0.8;
-  }
+  /* Badge hover */
+  .badge-strip img:hover { opacity: .8; }
 
-  /* Dark mode support */
+  /* Dark‑mode support */
   [data-md-color-scheme="slate"] .badge-strip {
     background: var(--md-default-bg-color);
     border-bottom-color: var(--md-default-fg-color--lightest);
   }
 
-  /* Responsive adjustments */
-  @media screen and (max-width: 768px) {
-    .badge-strip {
-      padding: 8px 16px;
-      gap: 4px;
-    }
+  /* Responsive tweaks */
+  @media (max-width: 768px) {
+    .badge-strip { padding: 8px 16px; gap: 4px; }
   }
 
-  /* Smooth positioning */
-  .md-main__inner {
-    margin-top: 0;
-  }
+  /* Smooth content shift */
+  .md-main__inner { margin-top: 0; }
 </style>
 {% endblock %}
