@@ -1,4 +1,4 @@
-### 1. Provider Selection Process (Sample)
+### 1. Provider Process (Sample)
 
 | User Action | System Response |
 |-------------|-----------------|

@@ -33,7 +33,7 @@ nav:
       - Rule Processing: llm-providers/ruleProcessing.md
       - Implementation Summary: llm-providers/implementationFlow.md
 
-  - LLM API Code Generation Guide:
+  - API Deep Dive:
       - Overview: providerSnippets/overview.md
       - Architecture: providerSnippets/architecture.md
       - How it Works: providerSnippets/howitworks.md
@@ -50,6 +50,8 @@ nav:
       - License: about/license.md
       - Acknowledgement: about/pydantic.license.md
       - Author: about/author.md
+      - Terms: about/TERMS_OF_USE.md
+      - Privacy: about/PRIVACY_POLICY.md
 
 extra:
   generator: false

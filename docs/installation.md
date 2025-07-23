@@ -44,16 +44,22 @@ pnpm tauri build  # generates .msi
 
 ---
 
-## Option 2: Hosted Demo (readonly)
+## Option 2: Hosted
 
 > Fastest path—no tooling, no downloads.
 
 1. **Open StructOut Demo**  
-   <https://ai.structout.dev>
+   <https://app.structout.dev>
 
 2. **Explore the interface**  
-   Everything runs in the browser as a readonly demonstration. You can view examples and explore features without making changes.
+   Everything runs in the browser.
 
 Choose this path when you want to **evaluate StructOut quickly** or demo it without touching a terminal.
 
 ---
+
+
+## Option 3: Native App
+
+
+_Microsoft Partner Store and iOS App, Coming soon..._

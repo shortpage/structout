@@ -1,5 +1,3 @@
-## Acknowledgement of Pydantic Usage
-
 StructOut relies on **[Pydantic](https://github.com/pydantic/pydantic)** when Python bundle that is produced is run, 
 
 Pydantic  is distributed under the MIT License.  

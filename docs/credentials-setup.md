@@ -123,7 +123,12 @@ The GUI provides an intuitive interface with four main sections:
 
 ---
 
-## 6. CLI Setup Walkthrough
+## 6. CLI Option
+
+_If you prefer Command Line Interface instead of GUI to setup your API Keys, the following commands are handy_
+
+_CLI gives all the same features available in the GUI Interface (matter of preference)_
+
 
 ### Get help
 
