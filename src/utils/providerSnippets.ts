@@ -22,7 +22,7 @@
  * File   : providerSnippets.ts
  * Author : Sesh Ragavachari
  * Date   : 2025-06-10
- * Version: 1.3  (+ run header; indent-safe; Pydantic-v1/2 pretty print)
+ * Version: 1.0
  *
  *  Emit a **self-contained Python demo** for the user-generated
  *  schema: reads the prompt & schema, calls the chosen provider SDK,

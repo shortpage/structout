@@ -23,7 +23,7 @@
  * File   : LocalSaveConfirmDialog.tsx
  * Author : Sesh Ragavachari
  * Date   : 2025-06-23
- * Version: 1.0  (initial release)
+ * Version: 1.0
  *
  * A modal confirmation dialog that appears whenever the user clicks
  * “Save” in SchemaDesigner.  It explains that schemas are stored only

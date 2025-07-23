@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------
  * File   : bundleHelpers.ts
  * Author : Sesh Ragavachari
- * Version: 2.2  (2025-07-16)
+ * Version: 1.0  (2025-07-16)
  * ------------------------------------------------------------------
  *  Assemble a **zip archive** that ships everything a user needs:
  *    • Pydantic model + demo driver (per provider & model)

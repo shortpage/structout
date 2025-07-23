@@ -1,4 +1,3 @@
-## StructOut – Terms of Use
 _Last updated: July 22 2025_
 
 Welcome to **StructOut**, an open‑source JSON‑schema designer hosted at <https://app.structout.dev> (the “**Site**”).  

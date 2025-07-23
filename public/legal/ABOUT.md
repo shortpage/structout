@@ -1,6 +1,6 @@
 # StructOut Designer
 
-_Version 0.1.0 — May 14 2025_
+_Version 0.1.0 — July,23 2025_
 
 **StructOut Designer** is a three-pane workspace that helps you craft
 machine-readable JSON-schema prompts for Large-Language-Model APIs.

@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------
  * MIT License
- * Copyright (c) 2025 Sesh Ragavachari
+ * Copyright (c) 2025 Sesh Ragavachari
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -13,102 +13,133 @@
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
  * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
- * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  * ------------------------------------------------------------------
  *
  * File   : LegalDownloadDialog.tsx
- * Author : Sesh Ragavachari
+ * Author : Sesh Ragavachari
  * Date   : 2025‑07‑20
- * Version: 1.3 (“Don’t repeat” checkbox)
+ * Version: 1.3 (“Don’t repeat” checkbox)
  *
  * Purpose
- *   Native <dialog> shown before each ZIP download.
- *   • Summarises API‑key cost, data‑privacy, and “AS IS” liability.
+ *   Native <dialog> shown before each ZIP download.
+ *   • Summarises API‑key cost, data‑privacy, and “AS IS” liability.
  *   • Displays full MIT license (scrollable).
  *   • Optional “Don’t show this again” check‑box (rendered when the
- *     parent passes showCheckbox = true).  If ticked, the parent
+ *     parent passes showCheckbox = true).  If ticked, the parent
  *     chooses whether to persist that choice.
+ * ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+ * MIT License
+ * Copyright (c) 2025  Sesh Ragavachari
  * ------------------------------------------------------------------ */
 
 import { useEffect, useRef, useState } from "react";
+import "../style/legal-dialog.css"; // adjust path if needed
 
 interface Props {
   open: boolean;
-  /** render the “Don’t show again” box when true */
-  showCheckbox?: boolean; // ← optional
+  showCheckbox?: boolean;
   onAccept: (dontRepeat: boolean) => void;
   onCancel: () => void;
 }
 
-export const LegalDownloadDialog = ({ open, onAccept, onCancel }: Props) => {
+export const LegalDownloadDialog = ({
+  open,
+  showCheckbox = true,
+  onAccept,
+  onCancel,
+}: Props) => {
   const dlg = useRef<HTMLDialogElement>(null);
   const [dontRepeat, setDontRepeat] = useState(false);
 
-  /* sync native <dialog> element */
+  /* sync native <dialog> */
   useEffect(() => {
-    const el = dlg.current;
-    if (!el) return;
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    open ? el.showModal() : el.close();
+    dlg.current && (open ? dlg.current.showModal() : dlg.current.close());
   }, [open]);
 
-  /* reset checkbox whenever dialog re‑opens */
+  /* reset checkbox when reopening */
   useEffect(() => {
     if (open) setDontRepeat(false);
   }, [open]);
 
-  /* ------------------------------------------------------------ */
   return (
     <dialog ref={dlg} className="legal-dialog">
-      <h2>⚠️ Important Legal Notice</h2>
+      <h2>⚠️Important Legal Notice</h2>
+      <p className="legal-intro">
+        You’re about to download code snippets that uses third‑party LLM calls.
+        calls. Please review these key points:
+      </p>
 
       {/* ---------- API keys & billing --------------------------- */}
       <section className="disclaimer">
-        <h3>API Keys & Billing</h3>
+        <h3>API keys & billing</h3>
         <ul>
           <li>
-            You must supply <strong>your own</strong> LLM API keys.
+            You must supply <strong>your own</strong> LLM&nbsp;API&nbsp;keys.
+          </li>
+
+          <li>
+            Keys stay <strong>on your machine only</strong>. The generated stub
+            reads them from your local OS vault&nbsp; (Keychain Access on macOS,
+            Credential Manager on Windows, Secret Service on Linux) via Python{" "}
+            <code>keyring</code>.
           </li>
           <li>
-            All token usage, rate limits, and charges are your responsibility.
+            You add the key to that vault yourself by running the provided
+            `secure_key` setup helper; nothing is stored automatically.
           </li>
-          <li>StructOut never stores or pays for your API usage.</li>
+          <li>
+            <strong>
+              StructOut never uploads, transmits, or logs your keys
+            </strong>
+          </li>
+
+          <li>
+            Any token usage or charges are your responsibility.&nbsp;
+            <span style={{ color: "#c62828", fontWeight: 600 }}>
+              API calls incur provider costs—verify pricing.
+            </span>
+          </li>
         </ul>
       </section>
 
+
       {/* ---------- Data privacy -------------------------------- */}
       <section className="disclaimer">
-        <h3>Data Privacy & LLM Behaviour</h3>
+        <h3>Data privacy & LLM behaviour</h3>
         <ul>
           <li>Inputs/outputs flow through third‑party LLM providers.</li>
-          <li>Review provider policies (GDPR, CCPA…) before sending data.</li>
+          <li>Review provider policies (GDPR, CCPA…) before sending data.</li>
           <li>
-            LLM outputs may be inaccurate or unsafe – validate independently.
+            LLM outputs may be inaccurate or unsafe – validate independently.
           </li>
         </ul>
       </section>
 
       {/* ---------- Liability ----------------------------------- */}
       <section className="disclaimer">
-        <h3>Liability & Warranty</h3>
+        <h3>Liability & warranty</h3>
         <ul>
           <li>
-            StructOut is demo software supplied <strong>“AS IS”</strong>.
+            StructOut is supplied <strong>“AS IS”.</strong>
           </li>
           <li>
-            You assume <strong>all liability</strong> for downstream effects.
+            You accept <strong>all liability</strong> for downstream effects.
           </li>
-          <li>No warranties – express or implied.</li>
+          <li>No express or implied warranties.</li>
         </ul>
       </section>
 
-      {/* ---------- Full MIT text ------------------------------- */}
-      <h3>MIT License</h3>
-      <pre className="license">{`Copyright (c) 2025 Sesh Ragavachari
+      {/* ---------- MIT License accordion ----------------------- */}
+      <details className="license-accordion">
+        <summary>View MIT License</summary>
+        <pre className="license">{`Copyright (c) 2025 Sesh Ragavachari
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -124,19 +155,18 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.`}</pre>
+      </details>
 
-      <p className="final">
-        <strong>WARNING:</strong> API calls cost money – please verify pricing.
-      </p>
-
-      <label className="dont-repeat">
-        <input
-          type="checkbox"
-          checked={dontRepeat}
-          onChange={(e) => setDontRepeat(e.target.checked)}
-        />
-        Don’t show this again
-      </label>
+      {showCheckbox && (
+        <label className="dont-repeat">
+          <input
+            type="checkbox"
+            checked={dontRepeat}
+            onChange={(e) => setDontRepeat(e.target.checked)}
+          />
+          Don’t show this again
+        </label>
+      )}
 
       {/* ---------- actions ------------------------------------ */}
       <menu>
@@ -144,133 +174,9 @@ SOFTWARE.`}</pre>
           Cancel
         </button>
         <button onClick={() => onAccept(dontRepeat)} className="primary">
-          I Understand & Accept
+          Download & Accept
         </button>
       </menu>
-
-      {/* ---------- styles -------------------------------------- */}
-      <style>{`
-        /* =====================  LEGAL‑DIALOG  ===================== */
-          /* Scope‑busting selector for CSS‑modules / Vite */
-           dialog.legal-dialog {
-            --dlg-bg-light:#ffffff;
-            --dlg-bg-dark :#212121;
-            --dlg-text-dark:#e4e4e4;
-            --dlg-accent  :#1976d2;
-
-            width: clamp(320px, 90vw, 720px);
-            max-height: 82vh;
-            padding: 2.25rem 2.5rem;
-            border: none;
-            border-radius: 12px;
-            background: var(--dlg-bg-light);
-            box-shadow: 0 16px 40px rgb(0 0 0 / .35);
-            overflow-y: auto;
-            font-family: system-ui, sans-serif;
-            color: #1a1a1a;
-          }
-          @media (prefers-color-scheme: dark) {
-            dialog.legal-dialog {
-              background: var(--dlg-bg-dark);
-              color: var(--dlg-text-dark);
-            }
-          }
-
-          dialog.legal-dialog::backdrop{
-            background: rgb(0 0 0 / .55);
-          }
-
-          /* ---------- headings ---------- */
-          dialog.legal-dialog h2{
-            margin-top:0; margin-bottom:1.75rem;
-            font-size:1.55rem; font-weight:600;
-            display:flex; align-items:center; gap:.55rem;
-          }
-          dialog.legal-dialog h3{
-            margin:1.75rem 0 .8rem 0;
-            font-size:1.1rem; font-weight:600;
-          }
-
-          /* ---------- disclaimer blocks ---------- */
-          dialog.legal-dialog.disclaimer{
-            padding:1rem 1rem 1rem 1.25rem;
-            border-left:4px solid #ffb300;
-            border-radius:6px;
-            background:#fffbea;
-          }
-          @media(prefers-color-scheme:dark){
-           dialog.legal-dialog.disclaimer{
-              background:#2d2d1f;
-            }
-          }
-          dialog.legal-dialog.disclaimer ul{
-            margin:.5rem 0; padding-left:1.25rem;
-          }
-          dialog.legal-dialog.disclaimer li{margin-bottom:.45rem}
-
-          /* ---------- license scroll box ---------- */
-          dialog.legal-dialog pre.license{
-            max-height:14rem; overflow:auto;
-            padding:1rem; border-radius:6px;
-            font-size:.78rem; white-space:pre-wrap;
-            background:#f3f3f3;
-          }
-          @media(prefers-color-scheme:dark){
-            dialog.legal-dialog pre.license{
-              background:#2a2a2a;
-            }
-          }
-
-          /* ---------- final warning ---------- */
-          dialog.legal-dialog.final{
-            margin:1.6rem 0 1rem 0;
-            padding:.9rem;
-            text-align:center;
-            background:#ffebee;
-            border:2px solid #f44336;
-            border-radius:6px;
-            color:#c62828;
-            font-weight:600;
-          }
-          @media(prefers-color-scheme:dark){
-            :global(dialog.legal-dialog) .final{
-              background:#452525;
-            }
-          }
-
-          /* ---------- “don’t repeat” ---------- */
-          /* ---------- “don’t repeat” ---------- */
-          dialog.legal-dialog .dont-repeat{
-            display:flex; align-items:center; gap:.55rem;
-            margin:1.1rem 0 .4rem 0;
-            font-size:.83rem; color:#666;
-            user-select:none;
-          }
-
-          /* ---------- action buttons ---------- */
-          dialog.legal-dialog menu{
-            margin-top:2rem; padding:0;
-            display:flex; justify-content:flex-end; gap:1rem;
-          }
-          dialog.legal-dialog menu button{
-            padding:.55rem 1.35rem;
-            border:none; border-radius:6px;
-            font-size:.95rem; cursor:pointer;
-            transition:background-color .18s ease, opacity .18s ease;
-          }
-          dialog.legal-dialog button.cancel{
-            background:#e0e0e0; color:#424242;
-          }
-          dialog.legal-dialog button.cancel:hover{
-            background:#cfcfcf;
-          }
-          dialog.legal-dialog button.primary{
-            background:var(--dlg-accent); color:#fff; font-weight:600;
-          }
-          dialog.legal-dialog button.primary:hover{
-            background:#1257a8;
-          }
-      `}</style>
     </dialog>
   );
 };

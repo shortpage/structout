@@ -22,7 +22,7 @@
  * File   : providerRegistry.ts
  * Author : Sesh Ragavachari
  * Date   : 2025-06-10
- * Version: 1.1  (+ schemaExclude support)
+ * Version: 1.0
  *
  *  Central registry that wraps the quirks of each LLM vendor SDK
  *  (OpenAI, Anthropic, Gemini, etc.) behind a *single* typed

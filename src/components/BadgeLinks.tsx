@@ -22,7 +22,7 @@
  * File   : BadgeLinks.tsx
  * Author : Sesh Ragavachari
  * Date   : 2025‑06‑09
- * Version: 1.2
+ * Version: 1.0
  *
  *  Simple badge strip for the Workbench header
  *    • Uses shields.io SVGs
@@ -39,7 +39,7 @@ interface Badge {
 }
 
 const BADGES: Badge[] = [
-  /* CI status */
+  /* CI status */
   {
     href: "https://github.com/shortpage/structout/actions",
     img: "https://img.shields.io/github/actions/workflow/status/shortpage/structout/ci.yml?label=CI&logo=github&logoColor=white",
