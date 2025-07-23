@@ -5,10 +5,10 @@
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the “Software”), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify,
- * merge, publish, distribute, sublicense, and/or sell copies of the
- * Software, and to permit persons to whom the Software is furnished
- * to do so, subject to the following conditions:
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
@@ -16,37 +16,44 @@
  * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
  * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  * ------------------------------------------------------------------
  * File   : App.tsx
  * Author : Sesh Ragavachari
- * Date   : 2025-07-21
+ * Date   : 2025‑07‑23
  * Version: 1.0
  *
- *  Top-level React component.  Acts as the single entry-point for the
- *  StructOut Designer application by rendering the <Workbench/>,
- *  which hosts Explorer, Designer, and Generated-Schema panels.
- * ------------------------------------------------------------------ */
-/* --------------------------------------------------------------
- *  <App/> – Application root
+ *  Top‑level React component.  Mounts:
+ *    • <IntroGate/>  – one‑time “watch intro” modal
+ *    • <Workbench/>  – main StructOut designer
  *
  *  ⌁ Responsibilities
- *    • Mount the <Workbench/> container.
- *    • Remain intentionally *stateless* and *presentation‑free*.
- *      Any global providers (router, telemetry, error boundaries)
- *      should be wired here to avoid polluting business logic.
- * -------------------------------------------------------------- */
+ *    • Provide global wrappers/providers if needed (router, telemetry…).
+ *    • Remain intentionally *stateless* and *presentation‑free* beyond
+ *      gating logic.
+ * ------------------------------------------------------------------ */
 
-import Workbench from "./Workbench";
 import type React from "react";
+import Workbench from "./Workbench";
+import IntroGate from "./components/IntroGate";
 
 /**
- * The root component injected by ReactDOM.<br>
- * Keeping this file deliberately minimal makes it easy to wrap
- * global providers (routing, analytics, error boundaries, etc.)
- * later without touching the business logic in <Workbench/>.
+ * Application root injected by ReactDOM.
+ * The IntroGate shows a short onboarding video once per browser profile,
+ * then unblocks the full UI.
  */
 export default function App(): React.JSX.Element {
-  return <Workbench />;
+  return (
+    <>
+      {/* one‑time onboarding video */}
+      <IntroGate
+        videoSrc="/intro/short_intro.mp4" // path under /public
+        forceWatch={false} // set true to require full view
+      />
+
+      {/* main StructOut workbench */}
+      <Workbench />
+    </>
+  );
 }
