@@ -56,9 +56,9 @@ interface IntroGateProps {
 const FLAG_KEY = "structout.introSeen"; // bump suffix for new intro versions
 
 export default function IntroGate({
-                                    videoSrc,
-                                    forceWatch = false,
-                                  }: IntroGateProps) {
+  videoSrc,
+  forceWatch = false,
+}: IntroGateProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [open, setOpen] = useState(false);
   const [videoError, setVideoError] = useState(false);
@@ -87,7 +87,8 @@ export default function IntroGate({
   const startVideo = () => {
     if (videoRef.current) {
       videoRef.current.muted = false; // Unmute for sound
-      videoRef.current.play()
+      videoRef.current
+        .play()
         .then(() => {
           setHasStarted(true);
           console.log("IntroGate: Video started with sound");
@@ -96,7 +97,8 @@ export default function IntroGate({
           console.error("IntroGate: Play failed:", err);
           // Try playing muted as fallback
           videoRef.current!.muted = true;
-          videoRef.current!.play()
+          videoRef
+            .current!.play()
             .then(() => {
               setHasStarted(true);
               console.log("IntroGate: Fallback - playing muted");
