@@ -8,7 +8,7 @@ import react from "@vitejs/plugin-react";
 import path from "node:path";
 
 export default defineConfig(({ command }) => {
-  /* ── Build‑context helpers ───────────────────────────────────── */
+  /* ── Build‑contexts helpers ───────────────────────────────────── */
   const forTauri = Boolean(process.env.TAURI_PLATFORM);
   const isDev = command === "serve";
   const tauriPort = Number(process.env.TAURI_DEV_PORT || 1420);

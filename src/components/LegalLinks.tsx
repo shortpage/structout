@@ -4,19 +4,19 @@
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
- * files (the “Software”), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify,
- * merge, publish, distribute, sublicense, and/or sell copies of the
- * Software, and to permit persons to whom the Software is furnished
- * to do so, subject to the following conditions:
+ * files (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
  * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
  * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  * ------------------------------------------------------------------
  * File   : LegalLinks.tsx
@@ -24,7 +24,7 @@
  * Date   : 2025-06-09
  * Version: 1.0
  *
- *  Provide Header and Footer links (About, Privacy, Terms, MIT License) and
+ *  Provide Header and Footer links (About, Privacy, Terms, Intro Video) and
  *  Keep the component *tiny*: defer markdown hydration to `react‑markdown`
  *  + `remark‑gfm` and import GitHub stylesheet for instant typography.
  *
@@ -33,6 +33,7 @@
  *    extend `DOC_FILE`.
  *  • BASE_URL logic ensures paths resolve both in dev (/) and when
  *    the app is deployed under a sub‑folder (GitHub Pages, etc.).
+ *  • Now uses IntroVideoContext for smooth intro replay without reload
  * -------------------------------------------------------------- */
 
 import { useState } from "react";
@@ -41,6 +42,7 @@ import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useIntroVideo } from "../contexts/IntroVideoContext";
 
 /* ↓ one import = full GitHub markdown styles */
 import "github-markdown-css/github-markdown-light.css";
@@ -55,6 +57,7 @@ const DOC_FILE: Record<DocKey, string> = {
 
 export default function LegalLinks(): React.JSX.Element {
   const [markdown, setMarkdown] = useState<string | null>(null);
+  const { triggerIntroReplay } = useIntroVideo();
 
   /** fetch + open the selected document */
   const open = async (key: DocKey) => {
@@ -71,6 +74,12 @@ export default function LegalLinks(): React.JSX.Element {
     setMarkdown(text);
   };
 
+  /** Replay intro video smoothly without page reload */
+  const replayIntro = () => {
+    console.log("LegalLinks: Triggering intro replay");
+    triggerIntroReplay();
+  };
+
   return (
     <>
       <nav style={{ display: "flex", gap: "1rem", padding: "4px 8px" }}>
@@ -83,16 +92,12 @@ export default function LegalLinks(): React.JSX.Element {
         <button className="link-button" onClick={() => open("terms")}>
           Terms&nbsp;of&nbsp;Use
         </button>
-        <a
-          className="link-button"
-          href="https://github.com/shortpage/structout/blob/main/LICENSES/LICENSE"
-          target="_blank"
-          rel="noreferrer"
-        >
-          MIT&nbsp;License
-        </a>
+        <button className="link-button" onClick={replayIntro}>
+          Intro&nbsp;Video
+        </button>
       </nav>
 
+      {/* Markdown dialog */}
       <Dialog
         open={Boolean(markdown)}
         onClose={() => setMarkdown(null)}
