@@ -62,7 +62,11 @@ export const useIntroVideo = () => {
  * Provider component that manages intro video state.
  * Wrap your app with this to enable intro video replay functionality.
  */
-export function IntroVideoProvider({ children }: { children: React.ReactNode }) {
+export function IntroVideoProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [showIntro, setShowIntro] = useState(false);
 
   const triggerIntroReplay = () => {
@@ -78,7 +82,9 @@ export function IntroVideoProvider({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <IntroVideoContext.Provider value={{ showIntro, triggerIntroReplay, dismissIntro }}>
+    <IntroVideoContext.Provider
+      value={{ showIntro, triggerIntroReplay, dismissIntro }}
+    >
       {children}
     </IntroVideoContext.Provider>
   );
