@@ -16,6 +16,7 @@ StructOut is a client‑side, MIT‑licensed single‑page web application. All 
 
 ### 3. Acceptable Use  
 You **must not**:
+
 1. Violate any law or third‑party right while using the Site.
 
 2. Introduce malware, attempt unauthorized access, or overload the Site.
