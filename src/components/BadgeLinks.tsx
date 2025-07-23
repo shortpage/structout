@@ -16,17 +16,17 @@
  * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
  * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  * ------------------------------------------------------------------
  * File   : BadgeLinks.tsx
  * Author : Sesh Ragavachari
  * Date   : 2025‑06‑09
- * Version: 1.1
+ * Version: 1.2
  *
  *  Simple badge strip for the Workbench header
  *    • Uses shields.io SVGs
- *    • Links out to GitHub Actions, licence, Slack invite, Docs
+ *    • Links out to GitHub Actions, licence, Slack invite, Docs, Verified
  *    • Renders flex‑wrapped for narrow screens
  * -------------------------------------------------------------- */
 
@@ -56,15 +56,22 @@ const BADGES: Badge[] = [
   /* Slack invite */
   {
     href: "https://join.slack.com/t/structout/shared_invite/XXXXXXXX",
-    img: "https://img.shields.io/badge/Slack-Join Slack-4A154B?logo=slack&logoColor=white",
+    img: "https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white",
     alt: "Join our Slack",
   },
 
   /* Documentation */
   {
-    href: "https://docs.structout.dev",
+    href: "https://doc.structout.dev",
     img: "https://img.shields.io/badge/Documentation-blue",
     alt: "Project documentation",
+  },
+
+  /* Verified repository (signed commits) */
+  {
+    href: "https://github.com/shortpage/structout/commits/main",
+    img: "https://img.shields.io/badge/Verified-blue",
+    alt: "All commits signed & verified",
   },
 ];
 
