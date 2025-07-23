@@ -32,16 +32,15 @@ Every major vendor now supports JSON-Schema-style function or tool calls, so Str
 
 ---
 
-## Taking a Page from Pydantic—But in React
+## Concepts
 
-| Concept               | Pydantic (Python)                     | StructOut (React)                                     |
-|-----------------------|---------------------------------------|-------------------------------------------------------|
-| **Authoring surface** | `BaseModel` classes                   | Visual designer + TypeScript types                    |
-| **Validation**        | `.model_validate()`                   | Provider returns → Pydantic model inside the snippet  |
-| **Contract sharing**  | `.schema_json()`                      | Draft-07 JSON produced live                           |
-| **Extensibility**     | Inherit & mixin classes               | Add/override providers via `providerRegistry.ts`      |
+| Concept               | StructOut (React)                                    |
+|-----------------------|------------------------------------------------------|
+| **Authoring surface** | Visual designer + TypeScript types                   |
+| **Validation**        | Provider returns → Pydantic model inside the snippet |
+| **Contract sharing**  | Draft-07 JSON produced live                          |
+| **Extensibility**     | Add/override providers via `providerRegistry.ts`     |
 
-StructOut actually re-uses Pydantic for run-time validation _inside_ the generated snippets, so downstream Python apps gain type-safety “for free” while front-end teams stay in React.
 
 ---
 
