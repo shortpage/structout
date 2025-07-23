@@ -55,10 +55,7 @@ function AppContent(): React.JSX.Element {
     <>
       {/* Show intro on first visit OR when triggered via context */}
       {(!hasSeenIntro || showIntro) && (
-        <IntroGate
-          videoSrc="/intro/short_intro.mp4"
-          forceWatch={false}
-        />
+        <IntroGate videoSrc="/intro/short_intro.mp4" forceWatch={false} />
       )}
 
       {/* main StructOut workbench */}
