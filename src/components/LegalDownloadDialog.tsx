@@ -109,7 +109,6 @@ export const LegalDownloadDialog = ({
         </ul>
       </section>
 
-
       {/* ---------- Data privacy -------------------------------- */}
       <section className="disclaimer">
         <h3>Data privacy & LLM behaviour</h3>
