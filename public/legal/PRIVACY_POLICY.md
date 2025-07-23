@@ -11,7 +11,7 @@ StructOut is designed to run **100% in your browser**. This Notice explains what
 
 All such data stays on your device unless *you* download or copy it elsewhere.
 
-## 2 Edge Logs (Limited Technical Data)  
+## 2 Edge Logs  
 Our static host (Cloudflare Pages) automatically records standard HTTP access logs—IP address, user‑agent, timestamp, requested file—for security and debugging. Retention Policy is set by edge hosting provider.
 
 
@@ -24,7 +24,7 @@ Our static host (Cloudflare Pages) automatically records standard HTTP access lo
 
 StructOut never transmits or syncs your keys or Content to any server controlled by us.
 
-## 4. Large‑Language‑Model Prompts  
+## 4. LLM Prompts  
 When you invoke an LLM feature, the prompt text is sent **directly from your browser to your chosen LLM provider**. StructOut does not intermediate, log, or store this text. Review the provider’s privacy policy for how they handle your prompts.
 
 ## 5. Voluntary Correspondence  

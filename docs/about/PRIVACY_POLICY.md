@@ -35,7 +35,7 @@ If you email us, we keep your message and address only long enough to respond, t
 * Remove or purge stored API keys by running `python secure_key.py purge` or using `python secure_key_gui.py`.
 
 ### 7. Changes to This Notice  
-Material changes will be posted at <https://structout.dev/privacy> and the “Last updated” date will change.
+Material changes will be posted at <https://app.structout.dev/privacy> and the “Last updated” date will change.
 
 ### 8. Contact  
 Email: **contact@structout.dev**

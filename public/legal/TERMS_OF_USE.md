@@ -1,4 +1,3 @@
-# StructOut – Terms of Use
 _Last updated: July 22 2025_
 
 Welcome to **StructOut**, an open‑source JSON‑schema designer hosted at <https://structout.dev> (the “**Site**”).  
@@ -42,7 +41,7 @@ Email: **contact@structout.dev**
 > 3495 US Highway 1, STE 34, #1211  
 > Princeton, NJ 08540, USA
 
-## 9. Third‑Party LLM API Keys & Token‑Usage Costs
+## 9. Third‑Party LLM API Keys
 
 1. **User‑Supplied Keys**: StructOut lets you enter an API key issued by a third‑party large‑language‑model (LLM) provider. You are solely responsible for that key and for any charges the provider bills to your account.
 
@@ -57,7 +56,14 @@ Email: **contact@structout.dev**
    * launching the **Secure‑Key Setup GUI** with `python secure_key_gui.py`,  
      as described in the StructOut documentation.
 
-## 10. Prompts Sent to Third‑Party LLMs
+## 10. Token‑Usage Costs
+
+1. **Token Consumption**: When you run the download bundle produced by StructOut, they consume LLM Tokens.
+2. **Billings for Token**: Compute Tokens are metered and billed **directly by the LLM provider**, not by StructOut.
+3. **Responsibilty**: You, the user are responsible for managing LLM API Account, Pricing, Quotas, Usage, billing liability from LLM Provider**
+
+
+## 11. Prompts Sent to Third‑Party LLMs
 
 1. **Private or Sensitive Data**: Prompts are transmitted to your chosen LLM provider. **Do not include personal data, trade secrets, or other confidential information** unless you have confirmed the provider’s data‑handling practices meet your obligations.
 
@@ -69,7 +75,7 @@ Email: **contact@structout.dev**
 
    **Because StructOut runs entirely on your device, the project’s author cannot monitor or filter prompts.** You are solely responsible for complying with these rules and with the LLM provider’s policy. The author disclaims all liability arising from prompts you submit.
 
-## 11. Technical Skill Prerequisites & Support
+## 12. Technical Skill Prerequisites & Support
 
 1. **Required Skills**: Using the downloadable StructOut bundle assumes familiarity with including but not limited to:
   * a code editor or IDE (e.g., Visual Studio Code, PyCharm, etc...);
