@@ -55,7 +55,7 @@ const BADGES: Badge[] = [
 
   /* Slack invite */
   {
-    href: "https://join.slack.com/t/structout/shared_invite/XXXXXXXX",
+    href: "https://join.slack.com/t/structout/shared_invite/zt-39p6sjr4i-p9ljnreUdntSleaTJH7mQg",
     img: "https://img.shields.io/badge/Slack-4A154B?logo=slack&logoColor=white",
     alt: "Join our Slack",
   },
