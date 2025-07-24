@@ -10,7 +10,8 @@
     "build:tauri": "tauri build",
     "build": "tsc && vite build",
     "build:web": "tsc && vite build",
-    "build:demo": "tsc && vite build --mode demo --base /structout/",
+    "build:demo":      "vite build --mode demo --base /",
+    "build:demo:gh":   "vite build --mode demo --base /structout/",
     "preview": "vite preview",
     "preview:demo": "vite preview --mode demo --base /structout/",
     "deploy": "pnpm run build && pnpm dlx wrangler pages deploy dist --project-name structout",
@@ -20,7 +21,6 @@
     "sec:rust": "cd src-tauri && cargo audit -q && cargo geiger -q",
     "sec:code": "npx semgrep --config \"p/tslint-security\"",
     "sec": "npm run sec:js && npm run sec:rust && npm run sec:code",
-
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --check .",
     "prune:exports": "ts-prune > ts-prune.txt",
