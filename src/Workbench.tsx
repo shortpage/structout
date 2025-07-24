@@ -78,14 +78,14 @@ import {
 /* ------------------------------------------------------------------ */
 /* Mobile tab types                                                   */
 /* ------------------------------------------------------------------ */
-type MobileTab = 'explorer' | 'designer' | 'schema';
+type MobileTab = "explorer" | "designer" | "schema";
 
 /* ------------------------------------------------------------------ */
 /* Responsive detection hook                                          */
 /* ------------------------------------------------------------------ */
 const useResponsive = () => {
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+    typeof window !== "undefined" ? window.innerWidth < 768 : false,
   );
 
   useEffect(() => {
@@ -93,8 +93,8 @@ const useResponsive = () => {
       setIsMobile(window.innerWidth < 768);
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   return { isMobile };
@@ -114,8 +114,8 @@ const theme = createTheme({
     MuiTextField: {
       styleOverrides: {
         root: {
-          '& .MuiInputBase-input': {
-            fontSize: '16px',
+          "& .MuiInputBase-input": {
+            fontSize: "16px",
           },
         },
       },
@@ -124,15 +124,15 @@ const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          minHeight: '44px',
+          minHeight: "44px",
         },
       },
     },
     MuiIconButton: {
       styleOverrides: {
         root: {
-          minWidth: '44px',
-          minHeight: '44px',
+          minWidth: "44px",
+          minHeight: "44px",
         },
       },
     },
@@ -152,7 +152,7 @@ const Workbench: React.FC = () => {
   const [errToast, setErrToast] = useState<string>();
 
   /* Mobile-specific state */
-  const [activeTab, setActiveTab] = useState<MobileTab>('designer');
+  const [activeTab, setActiveTab] = useState<MobileTab>("designer");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const { isMobile } = useResponsive();
@@ -177,7 +177,7 @@ const Workbench: React.FC = () => {
 
       // Auto-navigate to designer on mobile
       if (isMobile) {
-        setActiveTab('designer');
+        setActiveTab("designer");
         setDrawerOpen(false);
       }
       return;
@@ -196,7 +196,7 @@ const Workbench: React.FC = () => {
 
       // Auto-navigate to designer on mobile
       if (isMobile) {
-        setActiveTab('designer');
+        setActiveTab("designer");
         setDrawerOpen(false);
       }
     } catch (e) {
@@ -231,17 +231,17 @@ const Workbench: React.FC = () => {
   /* ------------------------------------------------------------------ */
   const renderMobileContent = () => {
     switch (activeTab) {
-      case 'explorer':
+      case "explorer":
         return (
           <ScrollArea>
-            <div style={{ padding: '16px 0' }}>
+            <div style={{ padding: "16px 0" }}>
               <SectionHeader title="Explorer" />
               <LabelSidebar onSelectTemplate={handleSelectTemplate} />
             </div>
           </ScrollArea>
         );
 
-      case 'designer':
+      case "designer":
         return (
           <ScrollArea style={{ padding: "0 8px 8px" }}>
             <SchemaDesigner
@@ -253,7 +253,7 @@ const Workbench: React.FC = () => {
           </ScrollArea>
         );
 
-      case 'schema':
+      case "schema":
         return (
           <GeneratedSchemaPanel
             jsonSchema={jsonSchema}
@@ -273,14 +273,14 @@ const Workbench: React.FC = () => {
   /* ------------------------------------------------------------------ */
   const getTabLabel = (tab: MobileTab): string => {
     switch (tab) {
-      case 'explorer':
-        return 'Explorer';
-      case 'designer':
-        return 'Designer';
-      case 'schema':
-        return jsonSchema ? 'Schema ✓' : 'Schema';
+      case "explorer":
+        return "Explorer";
+      case "designer":
+        return "Designer";
+      case "schema":
+        return jsonSchema ? "Schema ✓" : "Schema";
       default:
-        return '';
+        return "";
     }
   };
 
@@ -316,15 +316,12 @@ const Workbench: React.FC = () => {
               <TagLine>
                 {isMobile
                   ? "LLM Output Designer"
-                  : "Structured Output Designer for LLM APIs"
-                }
+                  : "Structured Output Designer for LLM APIs"}
               </TagLine>
             </BrandWrap>
           </HeaderLeft>
 
-          <HeaderCenter>
-            {DEMO_READ_ONLY && <DemoBanner />}
-          </HeaderCenter>
+          <HeaderCenter>{DEMO_READ_ONLY && <DemoBanner />}</HeaderCenter>
 
           <HeaderRight>
             {SHOW_HEADER_LINKS && <LegalLinks />}
@@ -338,47 +335,46 @@ const Workbench: React.FC = () => {
             <>
               {/* Mobile Tab Navigation */}
               <TabNavigation>
-                {(['explorer', 'designer', 'schema'] as MobileTab[]).map((tab) => (
-                  <TabButton
-                    key={tab}
-                    active={activeTab === tab}
-                    onClick={() => setActiveTab(tab)}
-                  >
-                    {getTabLabel(tab)}
-                  </TabButton>
-                ))}
+                {(["explorer", "designer", "schema"] as MobileTab[]).map(
+                  (tab) => (
+                    <TabButton
+                      key={tab}
+                      active={activeTab === tab}
+                      onClick={() => setActiveTab(tab)}
+                    >
+                      {getTabLabel(tab)}
+                    </TabButton>
+                  ),
+                )}
               </TabNavigation>
 
               {/* Mobile Content */}
-              <MobileContent>
-                {renderMobileContent()}
-              </MobileContent>
+              <MobileContent>{renderMobileContent()}</MobileContent>
 
               {/* Mobile Drawer for Explorer */}
-              <DrawerOverlay
-                open={drawerOpen}
-                onClick={handleDrawerClose}
-              />
+              <DrawerOverlay open={drawerOpen} onClick={handleDrawerClose} />
               <DrawerContent open={drawerOpen}>
-                <div style={{ padding: '16px 0' }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '0 16px 16px',
-                    borderBottom: '1px solid #e0e0e0',
-                    marginBottom: '16px'
-                  }}>
+                <div style={{ padding: "16px 0" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "0 16px 16px",
+                      borderBottom: "1px solid #e0e0e0",
+                      marginBottom: "16px",
+                    }}
+                  >
                     <SectionHeader title="Explorer" />
                     <button
                       onClick={handleDrawerClose}
                       style={{
-                        background: 'none',
-                        border: 'none',
-                        fontSize: '24px',
-                        cursor: 'pointer',
-                        padding: '4px',
-                        lineHeight: 1
+                        background: "none",
+                        border: "none",
+                        fontSize: "24px",
+                        cursor: "pointer",
+                        padding: "4px",
+                        lineHeight: 1,
                       }}
                       aria-label="Close menu"
                     >
