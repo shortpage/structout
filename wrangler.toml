@@ -23,4 +23,4 @@ binding   = "ASSETS"
 #  Build command Pages runs  #
 ##############################
 [build]
-command = "pnpm run build"  # calls tsc && vite build
+command = "pnpm run build:demo"  # calls tsc && vite build
