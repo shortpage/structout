@@ -158,23 +158,19 @@ const Workbench: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-
-      {/* Demo notice appears site‑wide */}
-      {DEMO_READ_ONLY && <DemoBanner />}
-
       <Root>
         {/* ─────── Header ───────────────────────────────────────────── */}
         <div
           style={{
             display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
+            alignItems: "center",
             padding: "12px 24px",
             borderBottom: "1px solid #e5e7eb",
             flexWrap: "wrap",
+            rowGap: "8px",
           }}
         >
-          {/* Brand (left) */}
+          {/* 1️⃣  Logo + tagline (left) */}
           <BrandWrap style={{ flex: "0 0 auto" }}>
             <BrandName>
               Struct<span>Out</span>
@@ -182,7 +178,18 @@ const Workbench: React.FC = () => {
             <TagLine>Structured Output Designer for LLM APIs</TagLine>
           </BrandWrap>
 
-          {/* Links & badges (right) */}
+          {/* 2️⃣  Center slot — banner lives here */}
+          <div
+            style={{
+              flex: "1 1 auto", // take all remaining width
+              display: "flex",
+              justifyContent: "center",  // center horizontally
+            }}
+          >
+            {DEMO_READ_ONLY && <DemoBanner />}
+          </div>
+
+          {/* 3️⃣  Links + shields (right) */}
           <div
             style={{
               display: "flex",

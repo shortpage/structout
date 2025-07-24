@@ -39,44 +39,61 @@
  *  small and avoid failed imports in environments without lucide-react.
  * ------------------------------------------------------------------ */
 
+import { Box, Link, Typography } from "@mui/material";
 import { REPO_URL, DOCS_URL } from "../lib/constants";
 
 export default function DemoBanner() {
   return (
-    <div className="w-full bg-yellow-50 text-yellow-900 flex flex-wrap items-center justify-center gap-3 px-4 py-2 border-b border-yellow-300 text-sm">
-      {/* square pulse indicator */}
-      <div className="h-3 w-3 bg-yellow-600 rounded-sm animate-pulse" />
+    <Box
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 1.2, // theme spacing * 1.2
+        px: 2,
+        py: 0.5,
+        bgcolor: "#FEF9C3", // yellow‑100
+        border: "1px solid #FACC15", // yellow‑400
+        borderRadius: 1, // theme radius (≈4 px)
+        boxShadow: 1,
+        fontSize: "0.825rem",
+        lineHeight: 1.2,
+        whiteSpace: "pre-wrap",
+      }}
+    >
+      {/* pulsing square */}
+      <Box
+        sx={{
+          width: 10,
+          height: 10,
+          bgcolor: "#CA8A04", // yellow‑600
+          borderRadius: 0.5,
+          animation: "pulse 1.2s cubic-bezier(0.4,0,0.6,1) infinite",
+          "@keyframes pulse": {
+            "0%,100%": { opacity: 0.5 },
+            "50%": { opacity: 1 },
+          },
+        }}
+      />
 
-      {/* static label */}
-      <span className="font-semibold uppercase tracking-wide">
-        Demo&nbsp;Mode
-      </span>
+      <Typography sx={{ fontWeight: 600, textTransform: "uppercase" }}>
+        Demo Mode
+      </Typography>
 
-      {/* separator dot */}
-      <span className="mx-1">•</span>
+      <Box component="span" sx={{ mx: 0.5 }}>
+        •
+      </Box>
 
-      {/* call‑to‑action block */}
-      <span className="flex flex-wrap gap-1">
-        Hosted&nbsp;for&nbsp;demo&nbsp;only — for&nbsp;full&nbsp;access&nbsp;
-        <a
-          href={REPO_URL}
-          className="font-medium underline underline-offset-4 hover:text-yellow-700"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          clone&nbsp;the&nbsp;Git&nbsp;repo
-        </a>
-        &nbsp;and&nbsp;
-        <a
-          href={DOCS_URL}
-          className="font-medium underline underline-offset-4 hover:text-yellow-700"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          follow&nbsp;the&nbsp;docs
-        </a>
+      <Typography component="span">
+        Hosted for demo only — for full access{" "}
+        <Link href={REPO_URL} target="_blank" underline="hover">
+          clone the Git repo
+        </Link>{" "}
+        and{" "}
+        <Link href={DOCS_URL} target="_blank" underline="hover">
+          follow the docs
+        </Link>
         .
-      </span>
-    </div>
+      </Typography>
+    </Box>
   );
 }
