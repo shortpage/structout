@@ -4,13 +4,13 @@
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
- * files (the “Software”), to deal in the Software without restriction,
+ * files (the "Software"), to deal in the Software without restriction,
  * including without limitation the rights to use, copy, modify,
  * merge, publish, distribute, sublicense, and/or sell copies of the
  * Software, and to permit persons to whom the Software is furnished
  * to do so, subject to the following conditions:
  *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
  * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
@@ -23,7 +23,7 @@
  * File   : SchemaDesigner.tsx
  * Author : Sesh Ragavachari
  * Date   : 2025-06-10
- * Version: 1.1  (🔄 rename-in-place logic)
+ * Version: 1.2  (🔄 rename-in-place logic + provider awareness)
  *
  * Interactive middle pane of the StructOut workbench. Users edit
  * a nested field structure, set metadata, and save / delete schemas
@@ -34,6 +34,7 @@
  *  ➟ v1.1 adds in-place ID renaming: when the user alters the schema ID
  *   and clicks Save, the old localStorage entry is removed and replaced
  *   by the new one instead of creating a duplicate.
+ *  ➟ v1.2 adds provider awareness to regenerate schema when provider changes
  * -------------------------------------------------------------- */
 
 import React, {
@@ -43,7 +44,7 @@ import React, {
   useImperativeHandle,
   useDeferredValue,
   startTransition,
-  useRef, // 🔄 rename-in-place
+  useRef,
 } from "react";
 import Box from "@mui/material/Box";
 import {
@@ -75,6 +76,7 @@ import {
 } from "./style/SchemaDesignerLayout";
 import { toCamel } from "./utils/toCamel";
 import { isLegalId } from "./utils/idValidator";
+import { ModelKey } from "./utils/providerRegistry"; // Add this import
 
 /* ---------- theme local to the designer pane ------------------- */
 const muiTheme = createTheme({
@@ -115,6 +117,7 @@ export interface SchemaField {
 /* ---------- imperative handle exposed to Workbench ------------- */
 export interface SchemaDesignerHandle {
   setSchemaState: (o: unknown) => void;
+  regenerateSchema?: () => void; // Add this method
 }
 
 interface Props {
@@ -123,6 +126,8 @@ interface Props {
   /** Emits freshly generated JSON Schema. */
   onJsonSchemaGenerated: (s: string) => void;
   readOnly?: boolean;
+  providerId?: ProviderId;
+  modelKey?: ModelKey;
 }
 
 /* ============================================================== */
@@ -180,9 +185,8 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
       onChange={(e) => onMetaDesc(e.target.value)}
       disabled={readOnly}
       slotProps={{
-        // <-- new home for “inner-element” props
         htmlInput: {
-          maxLength: 250, // 250-char clamp
+          maxLength: 250,
         },
       }}
     />
@@ -260,7 +264,16 @@ const FieldTable: React.FC<{
 /* ============================================================== */
 // eslint-disable-next-line react/display-name
 const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
-  ({ headerRule, onJsonSchemaGenerated, readOnly = false }, ref) => {
+  (
+    {
+      headerRule,
+      onJsonSchemaGenerated,
+      readOnly = false,
+      providerId,
+      modelKey,
+    },
+    ref,
+  ) => {
     /* ---------------- state ----------------------------------- */
     const [fields, setFields] = useState<SchemaField[]>([]);
     const [metaName, setMetaName] = useState("");
@@ -271,6 +284,7 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
 
     /* 🔄 remember last stored key for rename-in-place ------------ */
     const prevKeyRef = useRef<string | null>(null);
+    const prevProviderRef = useRef<ProviderId | undefined>(providerId);
 
     /* ---------- imperative setter (eslint-clean) ------------------- */
 
@@ -291,11 +305,27 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
       o !== null &&
       Array.isArray((o as { fields?: unknown }).fields);
 
+    /* ---------- Schema generation function ---------------------- */
+    const generateSchemaInternal = () => {
+      if (!metaName.trim()) {
+        onJsonSchemaGenerated("");
+        return;
+      }
+
+      const schema = jsonSchemaGenerator(
+        fields,
+        metaName.trim(),
+        metaDesc.trim(),
+        headerRule,
+      );
+
+      onJsonSchemaGenerated(JSON.stringify(schema, null, 2));
+    };
+
     useImperativeHandle(ref, () => ({
       setSchemaState(input: unknown) {
-        if (!isLocalSchemaState(input)) return; // bail out early
+        if (!isLocalSchemaState(input)) return;
 
-        /* 1️⃣ load the field array */
         const {
           fields: fld,
           metadataName,
@@ -304,14 +334,13 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
         } = input;
         setFields(fld);
 
-        /* 2️⃣ populate ID + Description from whichever keys exist */
         const loadedName = metadataName ?? header?.schemaId ?? "";
         setMetaName(loadedName);
         setMetaDesc(metadataDescription ?? header?.description ?? "");
 
-        /* 3️⃣ remember the corresponding storage key */
-        prevKeyRef.current = `schema_metadata_${loadedName.trim()}`; // 🔄
+        prevKeyRef.current = `schema_metadata_${loadedName.trim()}`;
       },
+      regenerateSchema: generateSchemaInternal, // Expose the regeneration method
     }));
 
     /* ---------- derived flags & keys -------------------------- */
@@ -332,24 +361,22 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
     const dMetaDesc = useDeferredValue(metaDesc);
 
     useEffect(() => {
-      if (!dMetaName.trim()) {
-        onJsonSchemaGenerated("");
-        return;
-      }
-      onJsonSchemaGenerated(
-        JSON.stringify(
-          jsonSchemaGenerator(
-            dFields,
-            dMetaName.trim(),
-            dMetaDesc.trim(),
-            dHeaderRule,
-          ),
-          null,
-          2,
-        ),
-      );
+      generateSchemaInternal();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dFields, dMetaName, dMetaDesc, dHeaderRule]);
+
+    /* ---------- Watch for provider changes and regenerate -------- */
+    useEffect(() => {
+      // Only regenerate if provider actually changed and we have fields
+      if (
+        providerId &&
+        providerId !== prevProviderRef.current &&
+        fields.length > 0
+      ) {
+        generateSchemaInternal();
+        prevProviderRef.current = providerId;
+      }
+    }, [providerId, modelKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
     /* ---------- helpers: save / delete ------------------------ */
     const fireStorageEvent = (
@@ -370,7 +397,7 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
     const doSave = () => {
       if (readOnly || !canSave) return;
 
-      const newKey = `schema_metadata_${metaName.trim()}`; // 🔄
+      const newKey = `schema_metadata_${metaName.trim()}`;
       const payload = JSON.stringify({
         metadataName: metaName.trim(),
         metadataDescription: metaDesc.trim(),
@@ -379,18 +406,15 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
       });
 
       try {
-        /* 1️⃣ remove old key if ID changed --------------------- */
         if (prevKeyRef.current && prevKeyRef.current !== newKey) {
           localStorage.removeItem(prevKeyRef.current);
           fireStorageEvent(prevKeyRef.current, null, null);
         }
 
-        /* 2️⃣ write new key ----------------------------------- */
         localStorage.setItem(newKey, payload);
         fireStorageEvent(newKey, null, payload);
-        prevKeyRef.current = newKey; // 🔄
+        prevKeyRef.current = newKey;
 
-        /* 3️⃣ UX feedback ------------------------------------- */
         startTransition(() => {
           setSaved(true);
           setTimeout(() => setSaved(false), 1500);
@@ -405,7 +429,7 @@ const SchemaDesigner = forwardRef<SchemaDesignerHandle, Props>(
       setMetaName("");
       setMetaDesc("");
       setSaved(false);
-      prevKeyRef.current = null; // 🔄
+      prevKeyRef.current = null;
       onJsonSchemaGenerated("");
     };
 

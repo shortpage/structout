@@ -171,6 +171,25 @@ export const TabButton = styled.button<{ active: boolean }>`
 `;
 
 /* ------------------------------------------------------------------ */
+/* Bottom Tab Bar – fixed at viewport bottom (mobile only)            */
+/* ------------------------------------------------------------------ */
+export const BottomTabBar = styled("nav")`
+  position: fixed;
+  bottom: env(safe-area-inset-bottom);
+  left: 0;
+  width: 100%;
+  height: 56px; /* material bottom‑nav height */
+  display: flex;
+  border-top: 1px solid #e0e0e0;
+  background: #fff;
+  z-index: 1000;
+
+  @media (min-width: 768px) {
+    display: none; /* hide on desktop */
+  }
+`;
+
+/* ------------------------------------------------------------------ */
 /* Mobile Content Container                                           */
 /* ------------------------------------------------------------------ */
 export const MobileContent = styled.div`
@@ -181,6 +200,13 @@ export const MobileContent = styled.div`
   @media (min-width: ${BREAKPOINTS.tablet}) {
     display: none;
   }
+`;
+
+export const FabWrap = styled("div")`
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom) + 72px); /* sits above tab bar */
+  right: 16px;
+  z-index: 1200;
 `;
 
 /* ------------------------------------------------------------------ */

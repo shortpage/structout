@@ -2,33 +2,10 @@
  * MIT License
  * Copyright (c) 2025  Sesh Ragavachari
  *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify, merge,
- * publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so,
- * subject to the following conditions:
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- * ------------------------------------------------------------------
- *
- * File   : Workbench.tsx (Mobile-Responsive Version)
+ * File   : Workbench.tsx
  * Author : Sesh Ragavachari
- * Date   : 2025-07-24
- * Version: 2.0 - Mobile Support Added
- *
- * Mobile-first responsive layout:
- * • Mobile: Tab-based navigation with drawer
- * • Desktop: Original 3-column layout
- * -------------------------------------------------------------- */
+ * Version: 2.4.3 – Seamless provider switching
+ * ------------------------------------------------------------------ */
 
 import React, { useRef, useState, useEffect } from "react";
 import { DEMO_READ_ONLY, SHOW_TOUR } from "./lib/constants";
@@ -36,14 +13,18 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
-import BadgeLinks from "./components/BadgeLinks";
 import MenuIcon from "@mui/icons-material/Menu";
+import SettingsIcon from "@mui/icons-material/Settings";
+import Fab from "@mui/material/Fab";
+import { styled } from "@mui/material";
 
+import BadgeLinks from "./components/BadgeLinks";
 import SchemaDesigner, {
   SchemaDesignerHandle,
   ProviderId,
 } from "./SchemaDesigner";
 import GeneratedSchemaPanel from "./GeneratedSchemaPanel";
+import SettingsSheet from "./components/SettingsSheet";
 import LabelSidebar from "./components/LabelSidebar";
 import SectionHeader from "./components/SectionHeader";
 import LegalLinks from "./components/LegalLinks";
@@ -51,7 +32,11 @@ import { loadProviderConfig } from "./utils/loadProviderConfig";
 import { EXAMPLES } from "./lib/exampleLoader";
 import DemoTour from "./components/DemoTour";
 import DemoBanner from "./components/DemoBanner";
+import { copyToClipboard } from "./utils/mobileUtils";
+import { buildZipBundle } from "./utils/bundleHelpers";
+import { ModelKey, PROVIDER_META } from "./utils/providerRegistry";
 
+/* --- styled layout helpers ------------------------------------- */
 import {
   Root,
   Header,
@@ -62,9 +47,6 @@ import {
   BrandName,
   TagLine,
   Frame,
-  TabNavigation,
-  TabButton,
-  MobileContent,
   DesktopColumns,
   ExplorerCol,
   DesignerCol,
@@ -73,36 +55,38 @@ import {
   DrawerOverlay,
   DrawerContent,
   MobileMenuButton,
+  BottomTabBar,
+  TabButton,
 } from "./style/AppLayout";
 
-/* ------------------------------------------------------------------ */
-/* Mobile tab types                                                   */
-/* ------------------------------------------------------------------ */
-type MobileTab = "explorer" | "designer" | "schema";
+const WorkbenchBody = styled("div")({
+  flex: "1 1 auto",
+  minHeight: 0,
+  overflowY: "auto",
+  paddingBottom: "72px", // tab bar height
+});
 
-/* ------------------------------------------------------------------ */
-/* Responsive detection hook                                          */
-/* ------------------------------------------------------------------ */
+const FabWrap = styled("div")({
+  position: "fixed",
+  bottom: "calc(env(safe-area-inset-bottom) + 72px)",
+  right: 16,
+  zIndex: 1200,
+});
+
+/* --- simple viewport hook -------------------------------------- */
 const useResponsive = () => {
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth < 768 : false,
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.innerWidth < 768,
   );
-
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const fn = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
   }, []);
-
   return { isMobile };
 };
 
-/* ------------------------------------------------------------------ */
-/* Mobile-optimized theme                                            */
-/* ------------------------------------------------------------------ */
+/* --- MUI theme tweaks (bigger touch targets on mobile) ---------- */
 const theme = createTheme({
   palette: { mode: "light" },
   typography: {
@@ -110,202 +94,178 @@ const theme = createTheme({
     fontSize: 14,
   },
   components: {
-    // Prevent iOS zoom on input focus
-    MuiTextField: {
-      styleOverrides: {
-        root: {
-          "& .MuiInputBase-input": {
-            fontSize: "16px",
-          },
-        },
-      },
-    },
-    // Touch-friendly buttons
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          minHeight: "44px",
-        },
-      },
-    },
+    MuiButton: { styleOverrides: { root: { minHeight: 44 } } },
     MuiIconButton: {
-      styleOverrides: {
-        root: {
-          minWidth: "44px",
-          minHeight: "44px",
-        },
-      },
+      styleOverrides: { root: { minWidth: 44, minHeight: 44 } },
     },
   },
 });
 
-const SHOW_HEADER_LINKS = true;
-const SHOW_FOOTER_LINKS = false;
+type MobileTab = "explorer" | "designer" | "schema";
 
 /* =============================================================== */
 const Workbench: React.FC = () => {
-  /* Original state */
+  /* ---------- state ---------- */
   const [providerId, setProviderId] = useState<ProviderId>("openai");
+  const [modelKey, setModelKey] = useState<ModelKey>(
+    PROVIDER_META.openai.defaultModel,
+  );
   const [headerRule, setHeaderRule] = useState("[]");
-  const [jsonSchema, setJsonSchema] = useState("");
-  const [schemaId, setSchemaId] = useState<string>("");
+  const [jsonSchema, setJsonSchema] = useState("{}");
+  const [schemaId, setSchemaId] = useState("");
   const [errToast, setErrToast] = useState<string>();
+  const [successToast, setSuccessToast] = useState<string>();
 
-  /* Mobile-specific state */
   const [activeTab, setActiveTab] = useState<MobileTab>("designer");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const { isMobile } = useResponsive();
   const designerRef = useRef<SchemaDesignerHandle>(null);
 
-  /* ------------------------------------------------------------------ */
-  /* Template loading with mobile navigation                            */
-  /* ------------------------------------------------------------------ */
-  const handleSelectTemplate = (tplId: string) => {
-    if (tplId.startsWith("example:")) {
-      const exId = tplId.slice("example:".length);
-      const payload = EXAMPLES[exId];
-
-      if (!payload) {
-        console.error("Missing example:", exId);
-        setErrToast("Example schema not found.");
-        return;
-      }
-
-      designerRef.current?.setSchemaState(payload);
-      setSchemaId(exId);
-
-      // Auto-navigate to designer on mobile
-      if (isMobile) {
-        setActiveTab("designer");
-        setDrawerOpen(false);
-      }
-      return;
-    }
-
-    const raw = localStorage.getItem(`schema_metadata_${tplId}`);
-    if (!raw) {
-      console.error("Saved schema not found:", tplId);
-      setErrToast("Saved schema not found.");
-      return;
-    }
-
-    try {
-      designerRef.current?.setSchemaState(JSON.parse(raw));
-      setSchemaId(tplId);
-
-      // Auto-navigate to designer on mobile
-      if (isMobile) {
-        setActiveTab("designer");
-        setDrawerOpen(false);
-      }
-    } catch (e) {
-      console.error("Corrupt schema JSON:", e);
-      setErrToast("Failed to load saved schema.");
-    }
-  };
-
-  /* Provider loading (unchanged) */
-  const loadProvider = async (id: ProviderId) => {
+  /* ---------- provider / model loaders ---------- */
+  const applyProvider = async (id: ProviderId) => {
     try {
       const cfg = await loadProviderConfig(id);
       setProviderId(id);
+      setModelKey(PROVIDER_META[id].defaultModel);
       setHeaderRule(cfg.llmSchemaHeader ?? "[]");
     } catch {
-      console.error("Provider JSON failed to load");
       setHeaderRule("[]");
       setErrToast("Provider configuration failed to load.");
     }
   };
 
-  const handleProviderChange = (id: ProviderId) => {
-    void loadProvider(id);
+  /* run once on mount so we have initial headerRule */
+  useEffect(() => {
+    void applyProvider(providerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ---------- template loader ---------- */
+  const loadTemplate = (id: string) => {
+    const forward = () => {
+      if (isMobile) {
+        setActiveTab("designer");
+        setDrawerOpen(false);
+      }
+    };
+
+    if (id.startsWith("example:")) {
+      const ex = EXAMPLES[id.slice("example:".length)];
+      if (!ex) return setErrToast("Example schema not found.");
+      designerRef.current?.setSchemaState(ex);
+      setSchemaId(id);
+      forward();
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem(`schema_metadata_${id}`);
+      if (!raw) throw new Error("not found");
+      designerRef.current?.setSchemaState(JSON.parse(raw));
+      setSchemaId(id);
+      forward();
+    } catch {
+      setErrToast("Failed to load saved schema.");
+    }
   };
 
-  useEffect(() => {
-    void loadProvider(providerId);
-  }, []); // eslint-disable-line
+  /* ---------- copy / download helpers ---------- */
+  const handleCopy = async () => {
+    if (!jsonSchema || jsonSchema === "{}") return setErrToast("No schema");
+    const ok = await copyToClipboard(jsonSchema);
+    if (ok) {
+      setSuccessToast("Copied!");
+    } else {
+      setErrToast("Copy blocked by browser");
+    }
+  };
 
-  /* ------------------------------------------------------------------ */
-  /* Mobile tab content rendering                                       */
-  /* ------------------------------------------------------------------ */
-  const renderMobileContent = () => {
-    switch (activeTab) {
-      case "explorer":
-        return (
-          <ScrollArea>
-            <div style={{ padding: "16px 0" }}>
-              <SectionHeader title="Explorer" />
-              <LabelSidebar onSelectTemplate={handleSelectTemplate} />
-            </div>
-          </ScrollArea>
-        );
+  const handleDownload = async () => {
+    if (!jsonSchema || jsonSchema === "{}") return setErrToast("No schema");
+    try {
+      const { blob } = await buildZipBundle(jsonSchema, providerId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${schemaId || "schema"}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setSheetOpen(false);
+    } catch (e) {
+      console.error(e);
+      setErrToast("ZIP generation failed");
+    }
+  };
 
-      case "designer":
-        return (
+  /* ---------- helpers ---------- */
+  const getTabLabel = (t: MobileTab) => {
+    if (t === "schema") {
+      return jsonSchema && jsonSchema !== "{}" ? "Schema ✓" : "Schema";
+    }
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  };
+
+  /* ---------- mobile renderer (always mounted designer) ---------- */
+  const renderMobile = () => {
+    return (
+      <>
+        {/* Always render SchemaDesigner but hide it when not active */}
+        <div
+          style={{
+            display: activeTab === "designer" ? "block" : "none",
+            height: "100%",
+          }}
+        >
           <ScrollArea style={{ padding: "0 8px 8px" }}>
             <SchemaDesigner
               ref={designerRef}
               headerRule={headerRule}
               onJsonSchemaGenerated={setJsonSchema}
               readOnly={DEMO_READ_ONLY}
+              providerId={providerId}
+              modelKey={modelKey}
             />
           </ScrollArea>
-        );
+        </div>
 
-      case "schema":
-        return (
+        {/* Explorer */}
+        {activeTab === "explorer" && (
+          <ScrollArea>
+            <div style={{ padding: 16 }}>
+              <SectionHeader title="Explorer" />
+              <LabelSidebar onSelectTemplate={loadTemplate} />
+            </div>
+          </ScrollArea>
+        )}
+
+        {/* Schema */}
+        {activeTab === "schema" && (
           <GeneratedSchemaPanel
+            key={`schema-${providerId}-${modelKey}`}
             jsonSchema={jsonSchema}
             llmProvider={providerId}
-            onProviderChange={handleProviderChange}
+            modelKey={modelKey}
+            onProviderChange={applyProvider}
+            onModelChange={setModelKey}
             schemaId={schemaId}
           />
-        );
-
-      default:
-        return null;
-    }
+        )}
+      </>
+    );
   };
 
-  /* ------------------------------------------------------------------ */
-  /* Tab labels with status indicators                                  */
-  /* ------------------------------------------------------------------ */
-  const getTabLabel = (tab: MobileTab): string => {
-    switch (tab) {
-      case "explorer":
-        return "Explorer";
-      case "designer":
-        return "Designer";
-      case "schema":
-        return jsonSchema ? "Schema ✓" : "Schema";
-      default:
-        return "";
-    }
-  };
-
-  /* ------------------------------------------------------------------ */
-  /* Handle drawer close on overlay click                              */
-  /* ------------------------------------------------------------------ */
-  const handleDrawerClose = () => {
-    setDrawerOpen(false);
-  };
-
-  /* ------------------------------------------------------------------ */
-  /* Render                                                            */
-  /* ------------------------------------------------------------------ */
+  /* ---------- render ---------- */
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Root>
-        {/* ─────── Responsive Header ───────────────────────────────── */}
+        {/* ------- header ------------------------------------------------ */}
         <Header>
           <HeaderLeft>
             {isMobile && (
-              <MobileMenuButton
-                onClick={() => setDrawerOpen(true)}
-                aria-label="Open explorer menu"
-              >
+              <MobileMenuButton onClick={() => setDrawerOpen(true)}>
                 <MenuIcon />
               </MobileMenuButton>
             )}
@@ -320,78 +280,79 @@ const Workbench: React.FC = () => {
               </TagLine>
             </BrandWrap>
           </HeaderLeft>
-
           <HeaderCenter>{DEMO_READ_ONLY && <DemoBanner />}</HeaderCenter>
-
           <HeaderRight>
-            {SHOW_HEADER_LINKS && <LegalLinks />}
+            <LegalLinks />
             <BadgeLinks />
           </HeaderRight>
         </Header>
 
-        {/* ─────── Mobile vs Desktop Layout ──────────────────────── */}
+        {/* ------- main frame ------------------------------------------- */}
         <Frame>
           {isMobile ? (
+            /* ===== Mobile layout ===== */
             <>
-              {/* Mobile Tab Navigation */}
-              <TabNavigation>
+              <WorkbenchBody>{renderMobile()}</WorkbenchBody>
+
+              {/* FAB */}
+              <FabWrap>
+                <Fab color="primary" onClick={() => setSheetOpen(true)}>
+                  <SettingsIcon />
+                </Fab>
+              </FabWrap>
+
+              {/* Tab bar */}
+              <BottomTabBar>
                 {(["explorer", "designer", "schema"] as MobileTab[]).map(
-                  (tab) => (
+                  (t) => (
                     <TabButton
-                      key={tab}
-                      active={activeTab === tab}
-                      onClick={() => setActiveTab(tab)}
+                      key={t}
+                      active={activeTab === t}
+                      onClick={() => setActiveTab(t)}
                     >
-                      {getTabLabel(tab)}
+                      {getTabLabel(t)}
                     </TabButton>
                   ),
                 )}
-              </TabNavigation>
+              </BottomTabBar>
 
-              {/* Mobile Content */}
-              <MobileContent>{renderMobileContent()}</MobileContent>
-
-              {/* Mobile Drawer for Explorer */}
-              <DrawerOverlay open={drawerOpen} onClick={handleDrawerClose} />
+              {/* Explorer drawer */}
+              <DrawerOverlay
+                open={drawerOpen}
+                onClick={() => setDrawerOpen(false)}
+              />
               <DrawerContent open={drawerOpen}>
-                <div style={{ padding: "16px 0" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "0 16px 16px",
-                      borderBottom: "1px solid #e0e0e0",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    <SectionHeader title="Explorer" />
-                    <button
-                      onClick={handleDrawerClose}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        fontSize: "24px",
-                        cursor: "pointer",
-                        padding: "4px",
-                        lineHeight: 1,
-                      }}
-                      aria-label="Close menu"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <LabelSidebar onSelectTemplate={handleSelectTemplate} />
+                <div style={{ padding: 16 }}>
+                  <SectionHeader title="Explorer" />
+                  <LabelSidebar onSelectTemplate={loadTemplate} />
                 </div>
               </DrawerContent>
+
+              {/* Settings sheet */}
+              <SettingsSheet
+                open={sheetOpen}
+                onClose={() => setSheetOpen(false)}
+                onOpen={() => {}}
+                isMobile
+                llmProvider={providerId}
+                modelKey={modelKey}
+                onProviderChange={applyProvider}
+                onModelChange={setModelKey}
+                onCopy={handleCopy}
+                onDownload={handleDownload}
+                onToggleDark={() => {}}
+                canCopy={!!jsonSchema && jsonSchema !== "{}"}
+                canDownload={!!jsonSchema && jsonSchema !== "{}"}
+                jsonSchema={jsonSchema}
+              />
             </>
           ) : (
-            /* Desktop Three-Column Layout */
+            /* ===== Desktop layout ===== */
             <DesktopColumns>
               <ExplorerCol>
                 <SectionHeader title="Explorer" />
                 <ScrollArea>
-                  <LabelSidebar onSelectTemplate={handleSelectTemplate} />
+                  <LabelSidebar onSelectTemplate={loadTemplate} />
                 </ScrollArea>
               </ExplorerCol>
 
@@ -402,53 +363,55 @@ const Workbench: React.FC = () => {
                     headerRule={headerRule}
                     onJsonSchemaGenerated={setJsonSchema}
                     readOnly={DEMO_READ_ONLY}
+                    providerId={providerId}
+                    modelKey={modelKey}
                   />
                 </ScrollArea>
               </DesignerCol>
 
               <SchemaCol>
                 <GeneratedSchemaPanel
+                  key={`schema-${providerId}-${modelKey}`}
                   jsonSchema={jsonSchema}
                   llmProvider={providerId}
-                  onProviderChange={handleProviderChange}
+                  modelKey={modelKey}
+                  onProviderChange={applyProvider}
+                  onModelChange={setModelKey}
                   schemaId={schemaId}
                 />
               </SchemaCol>
             </DesktopColumns>
           )}
 
-          {/* Tour component (desktop only) */}
           {!isMobile && DEMO_READ_ONLY && SHOW_TOUR && <DemoTour />}
         </Frame>
 
-        {/* Footer (unchanged) */}
-        {SHOW_FOOTER_LINKS && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              padding: "8px 24px",
-              borderTop: "1px solid #e5e7eb",
-            }}
-          >
-            <LegalLinks />
-          </div>
-        )}
-
-        {/* Error Toast */}
+        {/* ------- snackbars ------------------------------------------- */}
         <Snackbar
           open={!!errToast}
           autoHideDuration={4000}
           onClose={() => setErrToast(undefined)}
-          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
           <Alert
             severity="error"
             variant="filled"
             onClose={() => setErrToast(undefined)}
-            sx={{ width: "100%" }}
           >
             {errToast}
+          </Alert>
+        </Snackbar>
+
+        <Snackbar
+          open={!!successToast}
+          autoHideDuration={2000}
+          onClose={() => setSuccessToast(undefined)}
+        >
+          <Alert
+            severity="success"
+            variant="filled"
+            onClose={() => setSuccessToast(undefined)}
+          >
+            {successToast}
           </Alert>
         </Snackbar>
       </Root>

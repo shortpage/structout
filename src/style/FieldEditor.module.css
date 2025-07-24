@@ -350,6 +350,21 @@
   scroll-behavior: smooth;
 }
 
+/* FieldEditor.module.css */
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;     /* fill WorkbenchBody */
+  min-height: 0;    /* necessary in Firefox */
+}
+
+.editorPane {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--mobile-padding);
+}
+
+
 /* Prevent text selection on buttons */
 .leftCell button,
 .rightCell button {

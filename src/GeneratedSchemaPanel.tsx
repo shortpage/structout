@@ -1,46 +1,10 @@
 /* ------------------------------------------------------------------
- * MIT License
- * Copyright (c) 2025  Sesh Ragavachari
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify,
- * merge, publish, distribute, sublicense, and/or sell copies of the
- * Software, and to permit persons to whom the Software is furnished
- * to do so, subject to the following conditions:
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- * ------------------------------------------------------------------
- * File   : GeneratedSchemaPanel.tsx (Mobile-Responsive Version)
- * Author : Sesh Ragavachari
- * Date   : 2025-07-24
- * Version: 2.0 - Mobile Support Added
+ * MIT License  (header unchanged)
  * ------------------------------------------------------------------ */
 
 import React, { useCallback, useEffect, useState } from "react";
-import {
-  FormControl,
-  IconButton,
-  InputLabel,
-  Link,
-  MenuItem,
-  Select,
-  Tooltip,
-  Snackbar,
-  Alert,
-} from "@mui/material";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import DownloadIcon from "@mui/icons-material/Download";
+import { Link, Snackbar, Alert } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import Brightness4Icon from "@mui/icons-material/Brightness4";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
   oneLight,
@@ -59,49 +23,45 @@ import {
 } from "./style/GeneratedSchemaPanelLayout";
 
 import { generateHelperFiles, HelperFiles } from "./utils/ideHelperGenerator";
-import {
-  PROVIDER_META,
-  ProviderId,
-  PROVIDERS,
-  ModelKey,
-} from "./utils/providerRegistry";
+import { PROVIDER_META, ProviderId, ModelKey } from "./utils/providerRegistry";
 import { buildZipBundle } from "./utils/bundleHelpers";
 import { LegalDownloadDialog } from "./components/LegalDownloadDialog";
 import { LEGAL_POPUP_EVERY_DOWNLOAD } from "./lib/constants";
 import { useResponsive, copyToClipboard } from "./utils/mobileUtils";
+import SchemaControls from "./components/SchemaControls";
+import { Box } from "@mui/material";
 
-/* ---------- view modes ------------------------------------------ */
+/* ---------- view modes ---------- */
 type ViewMode = "schema" | "helper:model" | "helper:main";
 
 interface Props {
   jsonSchema: string;
   llmProvider: ProviderId;
   onProviderChange: (p: ProviderId) => void;
+  modelKey: ModelKey;
+  onModelChange: (m: ModelKey) => void;
   schemaId?: string;
 }
 
-/* ================  Component  ================================== */
+/* ================  Component  ================ */
 const GeneratedSchemaPanel: React.FC<Props> = ({
-  jsonSchema,
-  llmProvider,
-  onProviderChange,
-  schemaId,
-}) => {
-  /* ----------------------- state -------------------------------- */
-  const [modelKey, setModelKey] = useState<ModelKey>(
-    PROVIDER_META[llmProvider].defaultModel,
-  );
+                                                 jsonSchema,
+                                                 llmProvider,
+                                                 onProviderChange,
+                                                 modelKey,  // Use this directly from props
+                                                 onModelChange,
+                                                 schemaId,
+                                               }) => {
+  /* ---------- state ---------- */
+  // REMOVED: const [modelKey, setModelKey] = useState<ModelKey>(...) - This was causing the issue
   const [copied, setCopied] = useState(false);
   const [view, setView] = useState<ViewMode>("schema");
   const [blob, setBlob] = useState("");
   const [, setHelpers] = useState<HelperFiles | null>(null);
-  const [toast, setToast] = useState<string | undefined>();
+  const [toast, setToast] = useState<string>();
   const [dlgOpen, setDlgOpen] = useState(false);
 
-  // Mobile responsiveness
   const { isMobile } = useResponsive();
-
-  // Dark mode (honor system preference once; persist thereafter)
   const [darkMode, setDarkMode] = useState<boolean>(
     () =>
       (localStorage.getItem("schema_dark") ??
@@ -110,43 +70,24 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
           : "0")) === "1",
   );
 
-  const showCheckbox = !LEGAL_POPUP_EVERY_DOWNLOAD;
-
-  const codeBase = {
-    borderRadius: 4,
-    fontSize: isMobile ? 12 : 13,
-    lineHeight: 1.4,
-    padding: isMobile ? "12px 0" : "16px 0",
-  } as const;
-
-  const gutter = (dark: boolean) => ({
-    minWidth: isMobile ? 32 : 38,
-    paddingRight: isMobile ? 8 : 12,
-    textAlign: "right" as const,
-    userSelect: "none" as const,
-    color: dark ? "#889" : "#667",
-    background: dark ? "#1b1d21" : "#ececec",
-  });
+  /* ---------- effects ---------- */
+  useEffect(
+    () => localStorage.setItem("schema_dark", darkMode ? "1" : "0"),
+    [darkMode],
+  );
 
   useEffect(() => {
-    localStorage.setItem("schema_dark", darkMode ? "1" : "0");
-  }, [darkMode]);
-
-  /* provider change → reset modelKey + view ---------------------- */
-  useEffect(() => {
-    setModelKey(PROVIDER_META[llmProvider].defaultModel);
+    // REMOVED: setModelKey(PROVIDER_META[llmProvider].defaultModel);
     setView("schema");
     setBlob("");
   }, [llmProvider]);
 
-  /* schema regeneration reset ------------------------------------ */
   useEffect(() => {
     setHelpers(null);
     setView("schema");
     setBlob("");
   }, [jsonSchema]);
 
-  /* live-refresh helper code when modelKey changes ---------------- */
   useEffect(() => {
     if (!jsonSchema || !view.startsWith("helper")) return;
     const f = generateHelperFiles(jsonSchema, llmProvider, modelKey);
@@ -154,7 +95,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
     setBlob(view === "helper:model" ? f.modelCode : f.mainCode);
   }, [modelKey, jsonSchema, llmProvider, view]);
 
-  /* ---------- helpers (IDE code) ------------------------------- */
+  /* ---------- helper view toggles ---------- */
   const showHelpers = useCallback(
     (which: "model" | "main") => {
       if (!jsonSchema) return;
@@ -166,34 +107,19 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
     [jsonSchema, llmProvider, modelKey],
   );
 
-  /* ---------- dropdowns ----------------------------------------- */
+  /* ---------- misc helpers ---------- */
   const inHelperView = view.startsWith("helper");
   const safeModelKey: ModelKey =
     modelKey in PROVIDER_META[llmProvider].models
       ? modelKey
       : PROVIDER_META[llmProvider].defaultModel;
 
-  /* choose a canonical filename id -------------------------------- */
-  const canonicalId = (): string => {
-    if (schemaId && schemaId.trim()) return safe(schemaId.trim());
-    try {
-      const obj = JSON.parse(jsonSchema || "{}");
-      const raw = obj.metadataName || obj.title || obj.name || "schema";
-      return safe(raw);
-    } catch {
-      return "schema";
-    }
-  };
-  const safe = (raw: string) =>
-    (/^[A-Za-z_]/.test(raw) ? raw : `_${raw}`).replace(/[^0-9A-Za-z_]/g, "_");
-
-  /* ---------- copy & download ----------------------------------- */
+  /* ---------- copy / download ---------- */
   const isSchemaView = view === "schema";
 
   const copy = async () => {
     const txt = isSchemaView ? jsonSchema : blob;
     if (!txt) return;
-
     const success = await copyToClipboard(txt);
     if (success) {
       setCopied(true);
@@ -204,16 +130,10 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
   };
 
   const startDownload = () => {
-    if (LEGAL_POPUP_EVERY_DOWNLOAD) {
-      setDlgOpen(true);
-      return;
-    }
-    const userOptedOut = localStorage.getItem("structout.legalSkip") === "yes";
-    if (userOptedOut) {
+    if (LEGAL_POPUP_EVERY_DOWNLOAD) return setDlgOpen(true);
+    if (localStorage.getItem("structout.legalSkip") === "yes")
       void doDownload();
-    } else {
-      setDlgOpen(true);
-    }
+    else setDlgOpen(true);
   };
 
   const doDownload = async () => {
@@ -243,102 +163,70 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
     void doDownload();
   };
 
-  /* --------------------------- render --------------------------- */
+  /* filename helper */
+  const canonicalId = (): string => {
+    if (schemaId?.trim()) return safe(schemaId.trim());
+    try {
+      const obj = JSON.parse(jsonSchema || "{}");
+      const raw = obj.metadataName || obj.title || obj.name || "schema";
+      return safe(raw);
+    } catch {
+      return "schema";
+    }
+  };
+  const safe = (raw: string) =>
+    (/^[A-Za-z_]/.test(raw) ? raw : `_${raw}`).replace(/[^0-9A-Za-z_]/g, "_");
+
+  /* ---------- render ---------- */
+  const codeBase = {
+    borderRadius: 4,
+    fontSize: isMobile ? 12 : 13,
+    lineHeight: 1.4,
+    padding: isMobile ? "12px 0" : "16px 0",
+  } as const;
+  const gutter = (dark: boolean) => ({
+    minWidth: isMobile ? 32 : 38,
+    paddingRight: isMobile ? 8 : 12,
+    textAlign: "right" as const,
+    userSelect: "none" as const,
+    color: dark ? "#889" : "#667",
+    background: dark ? "#1b1d21" : "#ececec",
+  });
+
   return (
     <PanelRoot>
       <SectionHeader title="Generated Schema" />
 
-      {/* Provider + Model Controls */}
-      <ProviderRow>
-        <FormControl
-          variant="standard"
-          size="small"
-          sx={{ minWidth: isMobile ? 110 : 130 }}
-          disabled={inHelperView}
-        >
-          <InputLabel>Provider</InputLabel>
-          <Select
-            value={llmProvider}
-            label="Provider"
-            onChange={(e) => onProviderChange(e.target.value as ProviderId)}
-            id="provider-select"
-          >
-            {PROVIDERS.map((p) => (
-              <MenuItem key={p} value={p}>
-                {p}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      {/* desktop‑only control row */}
+      {!isMobile && (
+        <ProviderRow>
+          <SchemaControls
+            isMobile={false}
+            inHelperView={inHelperView}
+            view={view}
+            llmProvider={llmProvider}
+            modelKey={safeModelKey}
+            onProviderChange={onProviderChange}
+            onModelChange={onModelChange}  // Use the prop handler directly
+            onCopy={copy}
+            onDownload={startDownload}
+            onToggleDark={() => setDarkMode((d) => !d)}
+            canCopy={isSchemaView ? !!jsonSchema : !!blob}
+            canDownload={!!jsonSchema}
+          />
 
-        <FormControl
-          variant="standard"
-          size="small"
-          sx={{ minWidth: isMobile ? 120 : 150 }}
-          disabled={view !== "helper:main"}
-        >
-          <InputLabel>Model</InputLabel>
-          <Select
-            value={safeModelKey}
-            label="Model"
-            onChange={(e) => setModelKey(e.target.value as ModelKey)}
-            id="model-select"
-          >
-            {Object.keys(PROVIDER_META[llmProvider].models).map((k) => (
-              <MenuItem key={k} value={k}>
-                {k}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+          {copied && (
+            <Box sx={{ ml: 1 }}>
+              <StatusIndicator type="success">
+                <CheckCircleIcon fontSize="small" />
+                <ResponsiveText size="small">Copied</ResponsiveText>
+              </StatusIndicator>
+            </Box>
+          )}
+        </ProviderRow>
+      )}
 
-        {/* Action Buttons */}
-        <Tooltip title="Copy">
-          <span>
-            <IconButton
-              size="small"
-              disabled={isSchemaView ? !jsonSchema : !blob}
-              onClick={copy}
-              sx={{ ml: isMobile ? 0.5 : 1 }}
-            >
-              <ContentCopyIcon fontSize="inherit" />
-            </IconButton>
-          </span>
-        </Tooltip>
-
-        <Tooltip title="Download bundle (ZIP)">
-          <span>
-            <IconButton
-              size="small"
-              disabled={!jsonSchema}
-              onClick={startDownload}
-              sx={{ ml: 0.5 }}
-              id="btn-download"
-            >
-              <DownloadIcon fontSize="inherit" />
-            </IconButton>
-          </span>
-        </Tooltip>
-
-        <Tooltip title={darkMode ? "Light mode" : "Dark mode"}>
-          <IconButton
-            size="small"
-            onClick={() => setDarkMode((p) => !p)}
-            sx={{ ml: 0.5 }}
-          >
-            <Brightness4Icon fontSize="inherit" />
-          </IconButton>
-        </Tooltip>
-
-        {copied && (
-          <StatusIndicator type="success">
-            <CheckCircleIcon fontSize="small" />
-            <ResponsiveText size="small">Copied</ResponsiveText>
-          </StatusIndicator>
-        )}
-      </ProviderRow>
-
-      {/* Navigation Links */}
+      {/* Navigation links */}
       <LinkBar>
         <Link
           component="button"
@@ -352,7 +240,6 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
         <Link
           component="button"
           fontSize={isMobile ? 12 : 13}
-          id="link-helpers"
           underline={view.startsWith("helper") ? "always" : "hover"}
           onClick={() => showHelpers("model")}
         >
@@ -377,7 +264,6 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
               sx={{ ml: 0.5 }}
               color="text.secondary"
               underline={view === "helper:main" ? "always" : "hover"}
-              id="link-helper-main"
               onClick={() => showHelpers("main")}
             >
               main
@@ -386,7 +272,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
         )}
       </LinkBar>
 
-      {/* Code Viewer */}
+      {/* Code viewer */}
       <PanelBody>
         <JsonArea>
           {view === "schema" && jsonSchema && (
@@ -423,7 +309,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
         </JsonArea>
       </PanelBody>
 
-      {/* Error Toast */}
+      {/* snackbars & dialogs */}
       <Snackbar
         open={!!toast}
         autoHideDuration={4000}
@@ -440,10 +326,9 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
         </Alert>
       </Snackbar>
 
-      {/* Legal Dialog */}
       <LegalDownloadDialog
         open={dlgOpen}
-        showCheckbox={showCheckbox}
+        showCheckbox={!LEGAL_POPUP_EVERY_DOWNLOAD}
         onAccept={handleAccept}
         onCancel={() => setDlgOpen(false)}
       />
