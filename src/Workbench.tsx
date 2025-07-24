@@ -5,10 +5,10 @@
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the “Software”), to deal in the Software without restriction,
- * including without limitation the rights to use, copy, modify,
- * merge, publish, distribute, sublicense, and/or sell copies of the
- * Software, and to permit persons to whom the Software is furnished
- * to do so, subject to the following conditions:
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
  * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
@@ -64,6 +64,7 @@ import LegalLinks from "./components/LegalLinks";
 import { loadProviderConfig } from "./utils/loadProviderConfig";
 import { EXAMPLES } from "./lib/exampleLoader";
 import DemoTour from "./components/DemoTour";
+import DemoBanner from "./components/DemoBanner";
 
 import {
   Root,
@@ -92,7 +93,7 @@ const Workbench: React.FC = () => {
   const [providerId, setProviderId] = useState<ProviderId>("openai");
   const [headerRule, setHeaderRule] = useState("[]");
   const [jsonSchema, setJsonSchema] = useState("");
-  const [schemaId, setSchemaId] = useState<string>(""); // ← NEW
+  const [schemaId, setSchemaId] = useState<string>("");
   const [errToast, setErrToast] = useState<string>();
 
   const designerRef = useRef<SchemaDesignerHandle>(null);
@@ -103,7 +104,6 @@ const Workbench: React.FC = () => {
   /*  –  "foo"          ➜ user-saved template in localStorage           */
   /* ------------------------------------------------------------------ */
   const handleSelectTemplate = (tplId: string) => {
-    /* ─────── Examples ─────────────────────────────────────────── */
     if (tplId.startsWith("example:")) {
       const exId = tplId.slice("example:".length);
       const payload = EXAMPLES[exId];
@@ -115,11 +115,10 @@ const Workbench: React.FC = () => {
       }
 
       designerRef.current?.setSchemaState(payload);
-      setSchemaId(exId); // store bare ID, not the "example:" prefix
+      setSchemaId(exId);
       return;
     }
 
-    /* ─────── User-saved templates ─────────────────────────────── */
     const raw = localStorage.getItem(`schema_metadata_${tplId}`);
     if (!raw) {
       console.error("Saved schema not found:", tplId);
@@ -159,16 +158,20 @@ const Workbench: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+
+      {/* Demo notice appears site‑wide */}
+      {DEMO_READ_ONLY && <DemoBanner />}
+
       <Root>
         {/* ─────── Header ───────────────────────────────────────────── */}
         <div
           style={{
             display: "flex",
-            alignItems: "flex-start", // stack rows on the right
-            justifyContent: "space-between", // keep brand on the left
+            alignItems: "flex-start",
+            justifyContent: "space-between",
             padding: "12px 24px",
             borderBottom: "1px solid #e5e7eb",
-            flexWrap: "wrap", // allow small screens to wrap
+            flexWrap: "wrap",
           }}
         >
           {/* Brand (left) */}
@@ -179,12 +182,12 @@ const Workbench: React.FC = () => {
             <TagLine>Structured Output Designer for LLM APIs</TagLine>
           </BrandWrap>
 
-          {/* Legal links + badges (right, stacked) */}
+          {/* Links & badges (right) */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
-              alignItems: "flex-end", // right‑align both rows
+              alignItems: "flex-end",
               gap: "4px",
               flex: "0 0 auto",
             }}
@@ -225,11 +228,12 @@ const Workbench: React.FC = () => {
               schemaId={schemaId}
             />
           </SchemaCol>
-          {/* Joyride tour appears only in the read-only demo build */}
+
+          {/* Joyride tour appears only in the read‑only demo build */}
           {DEMO_READ_ONLY && SHOW_TOUR && <DemoTour />}
         </Frame>
 
-        {/* footer & snackbar remain unchanged … */}
+        {/* footer & snackbar -------------------------------------- */}
         {SHOW_FOOTER_LINKS && (
           <div
             style={{

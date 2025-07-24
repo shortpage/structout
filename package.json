@@ -3,15 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-
   "scripts": {
     "dev": "vite",
     "tauri:dev": "tauri dev",
     "build:tauri": "tauri build",
     "build": "tsc && vite build",
     "build:web": "tsc && vite build",
-    "build:demo":      "vite build --mode demo --base /",
-    "build:demo:gh":   "vite build --mode demo --base /structout/",
+    "build:demo": "vite build --mode demo --base /",
+    "build:demo:gh": "vite build --mode demo --base /structout/",
     "preview": "vite preview",
     "preview:demo": "vite preview --mode demo --base /structout/",
     "deploy": "pnpm run build && pnpm dlx wrangler pages deploy dist --project-name structout",
@@ -34,7 +33,6 @@
     "jest:watch": "jest --watch",
     "tauri": "tauri"
   },
-
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
@@ -57,7 +55,6 @@
     "styled-components": "^6.1.18",
     "uuid": "^11.1.0"
   },
-
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250620.0",
     "@tauri-apps/cli": "^2.5.0",
@@ -98,7 +95,6 @@
     "vite-tsconfig-paths": "^4.3.0",
     "vitest": "^3.2.2"
   },
-
   "overrides": {
     "prismjs": "^1.29.0",
     "glob": "^10.3.10",
@@ -107,13 +103,11 @@
       "domexception": "^5.0.0"
     }
   },
-
   "pnpm": {
     "overrides": {
       "d3-color": "^3.1.0",
       "prismjs": "^1.30.0"
     }
   },
-
   "packageManager": "pnpm@9.3.0"
 }

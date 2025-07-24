@@ -87,3 +87,6 @@ export const EXAMPLE_ENABLED = true;
 export const DEMO_READ_ONLY = import.meta.env.VITE_DEMO_READ_ONLY === "1";
 export const SHOW_TOUR = import.meta.env.VITE_SHOW_TOUR === "1";
 export const LEGAL_POPUP_EVERY_DOWNLOAD = false;
+// src/lib/constants.ts  (same file that exports DEMO_READ_ONLY)
+export const REPO_URL = "https://github.com/shortpage/structout";
+export const DOCS_URL = "https://doc.structout.dev/";
