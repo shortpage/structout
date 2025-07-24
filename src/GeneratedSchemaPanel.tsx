@@ -4,13 +4,13 @@
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
- * files (the “Software”), to deal in the Software without restriction,
+ * files (the "Software"), to deal in the Software without restriction,
  * including without limitation the rights to use, copy, modify,
  * merge, publish, distribute, sublicense, and/or sell copies of the
  * Software, and to permit persons to whom the Software is furnished
  * to do so, subject to the following conditions:
  *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
  * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
@@ -19,25 +19,14 @@
  * FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  * ------------------------------------------------------------------
- * File   : GeneratedSchemaPanel.tsx
+ * File   : GeneratedSchemaPanel.tsx (Mobile-Responsive Version)
  * Author : Sesh Ragavachari
- * Date   : 2025-06-09
- * Version: 1.0
- * ------------------------------------------------------------------
- *  Renders the read‑only artefacts generated from <SchemaDesigner/>.
- *  This includes:
- *    • Syntax‑highlighted JSON Schema preview
- *    • Provider/model client snippet (OpenAI, Anthropic, …)
- *    • Copy & Download actions (bundled ZIP with .json and .d.ts)
- *
- *  The component is pure‑view: all heavy lifting (schema generation,
- *  snippet templating, zip creation) is delegated to helpers in the
- *  `utils/` folder so this file stays lean and testable.
- * -------------------------------------------------------------- */
+ * Date   : 2025-07-24
+ * Version: 2.0 - Mobile Support Added
+ * ------------------------------------------------------------------ */
 
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Box,
   FormControl,
   IconButton,
   InputLabel,
@@ -45,26 +34,28 @@ import {
   MenuItem,
   Select,
   Tooltip,
-  Typography,
   Snackbar,
   Alert,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DownloadIcon from "@mui/icons-material/Download";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
   oneLight,
   oneDark,
 } from "react-syntax-highlighter/dist/esm/styles/prism";
-import Brightness4Icon from "@mui/icons-material/Brightness4";
 
 import SectionHeader from "./components/SectionHeader";
 import {
   PanelRoot,
   ProviderRow,
+  LinkBar,
   PanelBody,
   JsonArea,
+  StatusIndicator,
+  ResponsiveText,
 } from "./style/GeneratedSchemaPanelLayout";
 
 import { generateHelperFiles, HelperFiles } from "./utils/ideHelperGenerator";
@@ -77,8 +68,9 @@ import {
 import { buildZipBundle } from "./utils/bundleHelpers";
 import { LegalDownloadDialog } from "./components/LegalDownloadDialog";
 import { LEGAL_POPUP_EVERY_DOWNLOAD } from "./lib/constants";
+import { useResponsive, copyToClipboard } from "./utils/mobileUtils";
 
-/* ---------- view modes (examples removed) ---------------------- */
+/* ---------- view modes ------------------------------------------ */
 type ViewMode = "schema" | "helper:model" | "helper:main";
 
 interface Props {
@@ -87,15 +79,6 @@ interface Props {
   onProviderChange: (p: ProviderId) => void;
   schemaId?: string;
 }
-
-/* ---------- shared code style ---------------------------------- */
-const codeStyle = {
-  background: "#f5f5f5",
-  borderRadius: 4,
-  padding: 16,
-  fontSize: 13,
-  lineHeight: 1.4,
-} as const;
 
 /* ================  Component  ================================== */
 const GeneratedSchemaPanel: React.FC<Props> = ({
@@ -113,8 +96,12 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
   const [blob, setBlob] = useState("");
   const [, setHelpers] = useState<HelperFiles | null>(null);
   const [toast, setToast] = useState<string | undefined>();
+  const [dlgOpen, setDlgOpen] = useState(false);
 
-  // honour system preference once; persist thereafter
+  // Mobile responsiveness
+  const { isMobile } = useResponsive();
+
+  // Dark mode (honor system preference once; persist thereafter)
   const [darkMode, setDarkMode] = useState<boolean>(
     () =>
       (localStorage.getItem("schema_dark") ??
@@ -123,30 +110,23 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
           : "0")) === "1",
   );
 
-  const [dlgOpen, setDlgOpen] = useState(false);
-
-  /** show checkbox only if the user is *allowed* to dismiss */
   const showCheckbox = !LEGAL_POPUP_EVERY_DOWNLOAD;
 
   const codeBase = {
     borderRadius: 4,
-    fontSize: 13,
+    fontSize: isMobile ? 12 : 13,
     lineHeight: 1.4,
-    padding: "16px 0 16px 0", // leave gutter free
+    padding: isMobile ? "12px 0" : "16px 0",
   } as const;
 
   const gutter = (dark: boolean) => ({
-    minWidth: 38,
-    paddingRight: 12,
-    textAlign: "right",
+    minWidth: isMobile ? 32 : 38,
+    paddingRight: isMobile ? 8 : 12,
+    textAlign: "right" as const,
     userSelect: "none" as const,
     color: dark ? "#889" : "#667",
     background: dark ? "#1b1d21" : "#ececec",
   });
-
-  useEffect(() => {
-    localStorage.setItem("schema_dark", darkMode ? "1" : "0");
-  }, [darkMode]);
 
   useEffect(() => {
     localStorage.setItem("schema_dark", darkMode ? "1" : "0");
@@ -213,38 +193,26 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
   const copy = async () => {
     const txt = isSchemaView ? jsonSchema : blob;
     if (!txt) return;
-    try {
-      await navigator.clipboard.writeText(txt);
+
+    const success = await copyToClipboard(txt);
+    if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch {
+    } else {
       setToast("Copy failed. Your browser blocked clipboard access.");
     }
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // Download‑button click handler
-  // • If LEGAL_POPUP_EVERY_DOWNLOAD is true  → always show dialog (no checkbox)
-  // • Otherwise                            → show dialog unless user opted out
-  // ─────────────────────────────────────────────────────────────
-  // Download‑button click handler
   const startDownload = () => {
-    /* 1⃣  Global override – always gate with dialog (checkbox hidden) */
     if (LEGAL_POPUP_EVERY_DOWNLOAD) {
       setDlgOpen(true);
       return;
     }
-    /* 2⃣  Normal mode – honour per‑user opt‑out flag */
     const userOptedOut = localStorage.getItem("structout.legalSkip") === "yes";
-    console.log("Legal Skip is:", userOptedOut);
-    console.log(
-      "Legal Skip Value",
-      localStorage.getItem("structout.legalSkip"),
-    );
     if (userOptedOut) {
-      void doDownload(); // skip dialog
+      void doDownload();
     } else {
-      setDlgOpen(true); // show dialog with checkbox
+      setDlgOpen(true);
     }
   };
 
@@ -254,7 +222,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
       const { blob: zipBlob, id } = await buildZipBundle(
         jsonSchema,
         llmProvider,
-        undefined, // no exampleName
+        undefined,
         canonicalId(),
       );
       const url = URL.createObjectURL(zipBlob);
@@ -280,12 +248,12 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
     <PanelRoot>
       <SectionHeader title="Generated Schema" />
 
-      {/* provider + model row */}
+      {/* Provider + Model Controls */}
       <ProviderRow>
         <FormControl
           variant="standard"
           size="small"
-          sx={{ minWidth: 130 }}
+          sx={{ minWidth: isMobile ? 110 : 130 }}
           disabled={inHelperView}
         >
           <InputLabel>Provider</InputLabel>
@@ -306,7 +274,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
         <FormControl
           variant="standard"
           size="small"
-          sx={{ minWidth: 150 }}
+          sx={{ minWidth: isMobile ? 120 : 150 }}
           disabled={view !== "helper:main"}
         >
           <InputLabel>Model</InputLabel>
@@ -324,14 +292,14 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
           </Select>
         </FormControl>
 
-        {/* Copy / Download buttons */}
+        {/* Action Buttons */}
         <Tooltip title="Copy">
           <span>
             <IconButton
               size="small"
               disabled={isSchemaView ? !jsonSchema : !blob}
               onClick={copy}
-              sx={{ ml: 1 }}
+              sx={{ ml: isMobile ? 0.5 : 1 }}
             >
               <ContentCopyIcon fontSize="inherit" />
             </IconButton>
@@ -363,21 +331,18 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
         </Tooltip>
 
         {copied && (
-          <Typography
-            variant="caption"
-            sx={{ ml: 1, display: "flex", alignItems: "center", gap: 0.5 }}
-            color="success.main"
-          >
-            <CheckCircleIcon fontSize="small" /> Copied
-          </Typography>
+          <StatusIndicator type="success">
+            <CheckCircleIcon fontSize="small" />
+            <ResponsiveText size="small">Copied</ResponsiveText>
+          </StatusIndicator>
         )}
       </ProviderRow>
 
-      {/* link bar */}
-      <Box sx={{ px: 2, py: 0.5, display: "flex", gap: 2, flexWrap: "wrap" }}>
+      {/* Navigation Links */}
+      <LinkBar>
         <Link
           component="button"
-          fontSize={13}
+          fontSize={isMobile ? 12 : 13}
           underline={view === "schema" ? "always" : "hover"}
           onClick={() => setView("schema")}
         >
@@ -386,7 +351,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
 
         <Link
           component="button"
-          fontSize={13}
+          fontSize={isMobile ? 12 : 13}
           id="link-helpers"
           underline={view.startsWith("helper") ? "always" : "hover"}
           onClick={() => showHelpers("model")}
@@ -398,7 +363,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
           <>
             <Link
               component="button"
-              fontSize={12}
+              fontSize={11}
               sx={{ ml: 0.5 }}
               color="text.secondary"
               underline={view === "helper:model" ? "always" : "hover"}
@@ -408,7 +373,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
             </Link>
             <Link
               component="button"
-              fontSize={12}
+              fontSize={11}
               sx={{ ml: 0.5 }}
               color="text.secondary"
               underline={view === "helper:main" ? "always" : "hover"}
@@ -419,9 +384,9 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
             </Link>
           </>
         )}
-      </Box>
+      </LinkBar>
 
-      {/* viewer */}
+      {/* Code Viewer */}
       <PanelBody>
         <JsonArea>
           {view === "schema" && jsonSchema && (
@@ -445,7 +410,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
               language="python"
               style={darkMode ? oneDark : oneLight}
               customStyle={{
-                ...codeStyle,
+                ...codeBase,
                 background: darkMode ? "#1e1e1e" : "#f5f5f5",
               }}
               wrapLongLines
@@ -458,6 +423,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
         </JsonArea>
       </PanelBody>
 
+      {/* Error Toast */}
       <Snackbar
         open={!!toast}
         autoHideDuration={4000}
@@ -473,10 +439,11 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
           {toast}
         </Alert>
       </Snackbar>
-      {/* legal popup -------------------------------------------------- */}
+
+      {/* Legal Dialog */}
       <LegalDownloadDialog
         open={dlgOpen}
-        showCheckbox={showCheckbox} // ← new prop
+        showCheckbox={showCheckbox}
         onAccept={handleAccept}
         onCancel={() => setDlgOpen(false)}
       />

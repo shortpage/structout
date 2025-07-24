@@ -146,3 +146,386 @@ dialog.legal-dialog button:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* ------------------------------------------------------------------
+ * Global Mobile CSS - Add to index.css or App.css
+ * Mobile-first responsive styles and fixes
+ * ------------------------------------------------------------------ */
+
+/* CSS Variables for Responsive Design */
+:root {
+  --vh: 1vh; /* Will be set dynamically by JavaScript */
+  --touch-target-min: 44px;
+  --mobile-padding: 16px;
+  --tablet-padding: 24px;
+  --desktop-padding: 32px;
+  --mobile-font-size: 14px;
+  --desktop-font-size: 16px;
+  --primary-color: #2962ff;
+  --border-color: #e5e7eb;
+  --background-light: #f8f9fa;
+}
+
+/* Reset and Base Styles */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: var(--mobile-font-size);
+  line-height: 1.5;
+}
+
+/* Fix viewport height issues on mobile */
+.full-height {
+  height: 100vh;
+  height: calc(var(--vh) * 100);
+}
+
+/* Touch-friendly Elements */
+button,
+.MuiIconButton-root,
+.MuiButton-root,
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  touch-action: manipulation; /* Prevents delay on touch devices */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Prevent iOS zoom on input focus */
+input,
+select,
+textarea {
+  font-size: 16px; /* Prevents zoom on iOS */
+  -webkit-appearance: none; /* Remove iOS styling */
+}
+
+/* Remove focus outline on touch devices, keep for keyboard */
+@media (hover: none) and (pointer: coarse) {
+  button:focus,
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+  }
+}
+
+/* Keep focus outline for keyboard navigation */
+@media (hover: hover) and (pointer: fine) {
+  button:focus,
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+/* Responsive Typography */
+@media (min-width: 768px) {
+  body {
+    font-size: var(--desktop-font-size);
+  }
+}
+
+/* Responsive Spacing */
+.container {
+  padding: var(--mobile-padding);
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .container {
+    padding: var(--tablet-padding);
+  }
+}
+
+@media (min-width: 1025px) {
+  .container {
+    padding: var(--desktop-padding);
+  }
+}
+
+/* Mobile-First Responsive Utilities */
+.mobile-only {
+  display: block;
+}
+
+.tablet-up {
+  display: none;
+}
+
+.desktop-only {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none;
+  }
+
+  .tablet-up {
+    display: block;
+  }
+}
+
+@media (min-width: 1024px) {
+  .desktop-only {
+    display: block;
+  }
+}
+
+/* Safe Area Support for Notched Devices */
+@supports (padding: max(0px)) {
+  .safe-area-inset {
+    padding-left: max(var(--mobile-padding), env(safe-area-inset-left));
+    padding-right: max(var(--mobile-padding), env(safe-area-inset-right));
+    padding-top: max(var(--mobile-padding), env(safe-area-inset-top));
+    padding-bottom: max(var(--mobile-padding), env(safe-area-inset-bottom));
+  }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Hide scrollbars on mobile for cleaner look */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+/* Material-UI Overrides for Mobile */
+.MuiDialog-paper {
+  margin: 8px !important;
+  max-height: calc(100% - 16px) !important;
+}
+
+@media (max-width: 768px) {
+  .MuiDialog-paper {
+    margin: 4px !important;
+    max-height: calc(100% - 8px) !important;
+    max-width: calc(100% - 8px) !important;
+  }
+}
+
+/* Table Responsiveness */
+.MuiTable-root {
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .MuiTableContainer-root {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Form Field Improvements */
+.MuiTextField-root {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .MuiTextField-root .MuiInputBase-input {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+
+  .MuiTextField-root .MuiInputLabel-root {
+    font-size: 14px;
+  }
+}
+
+/* Button Improvements */
+@media (max-width: 768px) {
+  .MuiButton-root {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .MuiIconButton-root {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* Snackbar Positioning for Mobile */
+@media (max-width: 768px) {
+  .MuiSnackbar-root {
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 8px !important;
+  }
+}
+
+/* Performance Optimizations */
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-opacity {
+  will-change: opacity;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --border-color: #404040;
+    --background-light: #2a2a2a;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #2a2a2a;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #555;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #777;
+  }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  button,
+  input,
+  select,
+  textarea {
+    border: 2px solid !important;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .mobile-only,
+  .MuiIconButton-root,
+  .MuiButton-root {
+    display: none !important;
+  }
+
+  * {
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+}
+
+/* Landscape Orientation Adjustments */
+@media (max-width: 768px) and (orientation: landscape) {
+  .full-height {
+    height: 100vh; /* Use standard viewport height in landscape */
+  }
+
+  /* Make header more compact in landscape */
+  .MuiAppBar-root {
+    min-height: 48px;
+  }
+}
+
+/* Focus Management for Accessibility */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Loading States */
+.loading {
+  opacity: 0.7;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* Animation Classes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.slide-in-up {
+  animation: slideInUp 0.3s ease-out;
+}
+
+/* Ensure proper stacking context */
+.modal-backdrop {
+  z-index: 1040;
+}
+
+.modal {
+  z-index: 1050;
+}
+
+.tooltip {
+  z-index: 1070;
+}
+
+.popover {
+  z-index: 1060;
+}

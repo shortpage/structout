@@ -4,13 +4,13 @@
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
- * files (the “Software”), to deal in the Software without restriction,
+ * files (the "Software"), to deal in the Software without restriction,
  * including without limitation the rights to use, copy, modify, merge,
  * publish, distribute, sublicense, and/or sell copies of the Software,
  * and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
  *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
  * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
@@ -20,29 +20,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  * ------------------------------------------------------------------
  *
- * File   : Workbench.tsx
+ * File   : Workbench.tsx (Mobile-Responsive Version)
  * Author : Sesh Ragavachari
- * Date   : 2025-06-09
- * Version: 1.0
+ * Date   : 2025-07-24
+ * Version: 2.0 - Mobile Support Added
  *
- *   Layout
- *    ▸ Explorer column          (labels/examples)
- *    ▸ Designer column          (fields table & form)
- *    ▸ Schema column            (generated JSON + client snippet)
- *
- *   State lifetimes
- *    • providerId      – selected LLM provider (OpenAI, etc.)
- *    • headerRule      – provider‑specific header block
- *    • jsonSchema      – draft schema emitted by <SchemaDesigner/>
- *    • schemaId        – currently loaded LocalStorage key
- *
- *   Data flow
- *    User edits ► <SchemaDesigner/> updates ► jsonSchema ►
- *    <GeneratedSchemaPanel/> which formats, previews, bundles, copies.
- *
- *  All heavy logic (history, validation, bundle building) lives in
- *  children; this component stitches them together and handles
- *  theming + snackbars.
+ * Mobile-first responsive layout:
+ * • Mobile: Tab-based navigation with drawer
+ * • Desktop: Original 3-column layout
  * -------------------------------------------------------------- */
 
 import React, { useRef, useState, useEffect } from "react";
@@ -52,6 +37,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import BadgeLinks from "./components/BadgeLinks";
+import MenuIcon from "@mui/icons-material/Menu";
 
 import SchemaDesigner, {
   SchemaDesignerHandle,
@@ -68,20 +54,89 @@ import DemoBanner from "./components/DemoBanner";
 
 import {
   Root,
+  Header,
+  HeaderLeft,
+  HeaderCenter,
+  HeaderRight,
   BrandWrap,
   BrandName,
   TagLine,
   Frame,
+  TabNavigation,
+  TabButton,
+  MobileContent,
+  DesktopColumns,
   ExplorerCol,
   DesignerCol,
   SchemaCol,
   ScrollArea,
+  DrawerOverlay,
+  DrawerContent,
+  MobileMenuButton,
 } from "./style/AppLayout";
 
-/* ─────────────────────────────────────────────────────────────── */
+/* ------------------------------------------------------------------ */
+/* Mobile tab types                                                   */
+/* ------------------------------------------------------------------ */
+type MobileTab = 'explorer' | 'designer' | 'schema';
+
+/* ------------------------------------------------------------------ */
+/* Responsive detection hook                                          */
+/* ------------------------------------------------------------------ */
+const useResponsive = () => {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return { isMobile };
+};
+
+/* ------------------------------------------------------------------ */
+/* Mobile-optimized theme                                            */
+/* ------------------------------------------------------------------ */
 const theme = createTheme({
   palette: { mode: "light" },
-  typography: { fontFamily: "Roboto, Helvetica, Arial, sans-serif" },
+  typography: {
+    fontFamily: "Roboto, Helvetica, Arial, sans-serif",
+    fontSize: 14,
+  },
+  components: {
+    // Prevent iOS zoom on input focus
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiInputBase-input': {
+            fontSize: '16px',
+          },
+        },
+      },
+    },
+    // Touch-friendly buttons
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          minHeight: '44px',
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          minWidth: '44px',
+          minHeight: '44px',
+        },
+      },
+    },
+  },
 });
 
 const SHOW_HEADER_LINKS = true;
@@ -89,19 +144,22 @@ const SHOW_FOOTER_LINKS = false;
 
 /* =============================================================== */
 const Workbench: React.FC = () => {
-  /* state */
+  /* Original state */
   const [providerId, setProviderId] = useState<ProviderId>("openai");
   const [headerRule, setHeaderRule] = useState("[]");
   const [jsonSchema, setJsonSchema] = useState("");
   const [schemaId, setSchemaId] = useState<string>("");
   const [errToast, setErrToast] = useState<string>();
 
+  /* Mobile-specific state */
+  const [activeTab, setActiveTab] = useState<MobileTab>('designer');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const { isMobile } = useResponsive();
   const designerRef = useRef<SchemaDesignerHandle>(null);
 
   /* ------------------------------------------------------------------ */
-  /* Load a template chosen in the sidebar                              */
-  /*  –  "example:foo"  ➜ built-in example stored in EXAMPLES           */
-  /*  –  "foo"          ➜ user-saved template in localStorage           */
+  /* Template loading with mobile navigation                            */
   /* ------------------------------------------------------------------ */
   const handleSelectTemplate = (tplId: string) => {
     if (tplId.startsWith("example:")) {
@@ -116,6 +174,12 @@ const Workbench: React.FC = () => {
 
       designerRef.current?.setSchemaState(payload);
       setSchemaId(exId);
+
+      // Auto-navigate to designer on mobile
+      if (isMobile) {
+        setActiveTab('designer');
+        setDrawerOpen(false);
+      }
       return;
     }
 
@@ -129,13 +193,19 @@ const Workbench: React.FC = () => {
     try {
       designerRef.current?.setSchemaState(JSON.parse(raw));
       setSchemaId(tplId);
+
+      // Auto-navigate to designer on mobile
+      if (isMobile) {
+        setActiveTab('designer');
+        setDrawerOpen(false);
+      }
     } catch (e) {
       console.error("Corrupt schema JSON:", e);
       setErrToast("Failed to load saved schema.");
     }
   };
 
-  /* provider change (async) ------------------------------------- */
+  /* Provider loading (unchanged) */
   const loadProvider = async (id: ProviderId) => {
     try {
       const cfg = await loadProviderConfig(id);
@@ -147,100 +217,215 @@ const Workbench: React.FC = () => {
       setErrToast("Provider configuration failed to load.");
     }
   };
+
   const handleProviderChange = (id: ProviderId) => {
     void loadProvider(id);
   };
+
   useEffect(() => {
     void loadProvider(providerId);
   }, []); // eslint-disable-line
 
-  /* render ------------------------------------------------------- */
+  /* ------------------------------------------------------------------ */
+  /* Mobile tab content rendering                                       */
+  /* ------------------------------------------------------------------ */
+  const renderMobileContent = () => {
+    switch (activeTab) {
+      case 'explorer':
+        return (
+          <ScrollArea>
+            <div style={{ padding: '16px 0' }}>
+              <SectionHeader title="Explorer" />
+              <LabelSidebar onSelectTemplate={handleSelectTemplate} />
+            </div>
+          </ScrollArea>
+        );
+
+      case 'designer':
+        return (
+          <ScrollArea style={{ padding: "0 8px 8px" }}>
+            <SchemaDesigner
+              ref={designerRef}
+              headerRule={headerRule}
+              onJsonSchemaGenerated={setJsonSchema}
+              readOnly={DEMO_READ_ONLY}
+            />
+          </ScrollArea>
+        );
+
+      case 'schema':
+        return (
+          <GeneratedSchemaPanel
+            jsonSchema={jsonSchema}
+            llmProvider={providerId}
+            onProviderChange={handleProviderChange}
+            schemaId={schemaId}
+          />
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Tab labels with status indicators                                  */
+  /* ------------------------------------------------------------------ */
+  const getTabLabel = (tab: MobileTab): string => {
+    switch (tab) {
+      case 'explorer':
+        return 'Explorer';
+      case 'designer':
+        return 'Designer';
+      case 'schema':
+        return jsonSchema ? 'Schema ✓' : 'Schema';
+      default:
+        return '';
+    }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Handle drawer close on overlay click                              */
+  /* ------------------------------------------------------------------ */
+  const handleDrawerClose = () => {
+    setDrawerOpen(false);
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Render                                                            */
+  /* ------------------------------------------------------------------ */
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Root>
-        {/* ─────── Header ───────────────────────────────────────────── */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            padding: "12px 24px",
-            borderBottom: "1px solid #e5e7eb",
-            flexWrap: "wrap",
-            rowGap: "8px",
-          }}
-        >
-          {/* 1️⃣  Logo + tagline (left) */}
-          <BrandWrap style={{ flex: "0 0 auto" }}>
-            <BrandName>
-              Struct<span>Out</span>
-            </BrandName>
-            <TagLine>Structured Output Designer for LLM APIs</TagLine>
-          </BrandWrap>
+        {/* ─────── Responsive Header ───────────────────────────────── */}
+        <Header>
+          <HeaderLeft>
+            {isMobile && (
+              <MobileMenuButton
+                onClick={() => setDrawerOpen(true)}
+                aria-label="Open explorer menu"
+              >
+                <MenuIcon />
+              </MobileMenuButton>
+            )}
+            <BrandWrap>
+              <BrandName>
+                Struct<span>Out</span>
+              </BrandName>
+              <TagLine>
+                {isMobile
+                  ? "LLM Output Designer"
+                  : "Structured Output Designer for LLM APIs"
+                }
+              </TagLine>
+            </BrandWrap>
+          </HeaderLeft>
 
-          {/* 2️⃣  Center slot — banner lives here */}
-          <div
-            style={{
-              flex: "1 1 auto", // take all remaining width
-              display: "flex",
-              justifyContent: "center", // center horizontally
-            }}
-          >
+          <HeaderCenter>
             {DEMO_READ_ONLY && <DemoBanner />}
-          </div>
+          </HeaderCenter>
 
-          {/* 3️⃣  Links + shields (right) */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-end",
-              gap: "4px",
-              flex: "0 0 auto",
-            }}
-          >
+          <HeaderRight>
             {SHOW_HEADER_LINKS && <LegalLinks />}
             <BadgeLinks />
-          </div>
-        </div>
+          </HeaderRight>
+        </Header>
 
-        {/* workspace ---------------------------------------------- */}
+        {/* ─────── Mobile vs Desktop Layout ──────────────────────── */}
         <Frame>
-          {/* Explorer */}
-          <ExplorerCol>
-            <SectionHeader title="Explorer" />
-            <ScrollArea>
-              <LabelSidebar onSelectTemplate={handleSelectTemplate} />
-            </ScrollArea>
-          </ExplorerCol>
+          {isMobile ? (
+            <>
+              {/* Mobile Tab Navigation */}
+              <TabNavigation>
+                {(['explorer', 'designer', 'schema'] as MobileTab[]).map((tab) => (
+                  <TabButton
+                    key={tab}
+                    active={activeTab === tab}
+                    onClick={() => setActiveTab(tab)}
+                  >
+                    {getTabLabel(tab)}
+                  </TabButton>
+                ))}
+              </TabNavigation>
 
-          {/* Designer */}
-          <DesignerCol>
-            <ScrollArea style={{ padding: "0 16px 16px" }}>
-              <SchemaDesigner
-                ref={designerRef}
-                headerRule={headerRule}
-                onJsonSchemaGenerated={setJsonSchema}
-                readOnly={DEMO_READ_ONLY}
+              {/* Mobile Content */}
+              <MobileContent>
+                {renderMobileContent()}
+              </MobileContent>
+
+              {/* Mobile Drawer for Explorer */}
+              <DrawerOverlay
+                open={drawerOpen}
+                onClick={handleDrawerClose}
               />
-            </ScrollArea>
-          </DesignerCol>
+              <DrawerContent open={drawerOpen}>
+                <div style={{ padding: '16px 0' }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0 16px 16px',
+                    borderBottom: '1px solid #e0e0e0',
+                    marginBottom: '16px'
+                  }}>
+                    <SectionHeader title="Explorer" />
+                    <button
+                      onClick={handleDrawerClose}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '24px',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        lineHeight: 1
+                      }}
+                      aria-label="Close menu"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <LabelSidebar onSelectTemplate={handleSelectTemplate} />
+                </div>
+              </DrawerContent>
+            </>
+          ) : (
+            /* Desktop Three-Column Layout */
+            <DesktopColumns>
+              <ExplorerCol>
+                <SectionHeader title="Explorer" />
+                <ScrollArea>
+                  <LabelSidebar onSelectTemplate={handleSelectTemplate} />
+                </ScrollArea>
+              </ExplorerCol>
 
-          {/* Generated Schema */}
-          <SchemaCol>
-            <GeneratedSchemaPanel
-              jsonSchema={jsonSchema}
-              llmProvider={providerId}
-              onProviderChange={handleProviderChange}
-              schemaId={schemaId}
-            />
-          </SchemaCol>
+              <DesignerCol>
+                <ScrollArea style={{ padding: "0 16px 16px" }}>
+                  <SchemaDesigner
+                    ref={designerRef}
+                    headerRule={headerRule}
+                    onJsonSchemaGenerated={setJsonSchema}
+                    readOnly={DEMO_READ_ONLY}
+                  />
+                </ScrollArea>
+              </DesignerCol>
 
-          {/* Joyride tour appears only in the read‑only demo build */}
-          {DEMO_READ_ONLY && SHOW_TOUR && <DemoTour />}
+              <SchemaCol>
+                <GeneratedSchemaPanel
+                  jsonSchema={jsonSchema}
+                  llmProvider={providerId}
+                  onProviderChange={handleProviderChange}
+                  schemaId={schemaId}
+                />
+              </SchemaCol>
+            </DesktopColumns>
+          )}
+
+          {/* Tour component (desktop only) */}
+          {!isMobile && DEMO_READ_ONLY && SHOW_TOUR && <DemoTour />}
         </Frame>
 
-        {/* footer & snackbar -------------------------------------- */}
+        {/* Footer (unchanged) */}
         {SHOW_FOOTER_LINKS && (
           <div
             style={{
@@ -254,6 +439,7 @@ const Workbench: React.FC = () => {
           </div>
         )}
 
+        {/* Error Toast */}
         <Snackbar
           open={!!errToast}
           autoHideDuration={4000}

@@ -4,62 +4,357 @@
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
- * files (the “Software”), to deal in the Software without restriction,
+ * files (the "Software"), to deal in the Software without restriction,
  * including without limitation the rights to use, copy, modify,
  * merge, publish, distribute, sublicense, and/or sell copies of the
  * Software, and to permit persons to whom the Software is furnished
  * to do so, subject to the following conditions:
  *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND,
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
- * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
  * ------------------------------------------------------------------
- * File   : FieldEditor.module.css
+ * File   : FieldEditor.module.css (Mobile-Responsive Version)
  * Author : Sesh Ragavachari
- * Date   : 2025-06-09
- * Version: 1.0
+ * Date   : 2025-07-24
+ * Version: 2.0
  *
- *  Pure presentation styles consumed by <FieldEditor>.  All colours
- *  and typography are handled in JSX via MUI; these classes focus on
- *  spatial layout only.
+ * Mobile-first responsive styles for the field editor table
  * ------------------------------------------------------------------ */
 
-/* left-hand cell: up/down arrows */
-.leftCell {
-  display: flex;
-  gap: 4px;
-  padding-left: 4px;
+/* ===== Base Desktop Styles ====================================== */
+.tableBody {
+  font-size: 14px !important;
 }
 
-/* key / icon cell */
+.topBar {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fafafa;
+}
+
+.leftCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  min-width: 60px;
+}
+
 .keyCell {
   display: flex;
   align-items: center;
-  font-size: 0.875rem; /* MUI “body-2” */
+  padding: 8px;
+  min-height: 48px;
+  word-break: break-word;
 }
 
-/* right-hand cell: lock / + / edit / delete */
 .rightCell {
   display: flex;
-  gap: 4px;
-  padding-right: 4px;
-  justify-content: flex-end;
-}
-
-/* toolbar above the table */
-.topBar {
-  display: flex;
-  justify-content: flex-end;
   align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 8px;
+  min-width: 80px;
 }
 
-/* table body wrapper – enables vertical scroll */
+/* ===== Tablet Styles (768px - 1024px) =========================== */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .tableBody {
+    font-size: 13px !important;
+  }
+
+  .leftCell button,
+  .rightCell button {
+    min-width: 42px !important;
+    min-height: 42px !important;
+  }
+
+  .keyCell {
+    min-width: 160px;
+  }
+
+  .keyCell .MuiTypography-root {
+    font-size: 13px !important;
+  }
+}
+
+/* ===== Mobile Styles (max-width: 768px) ========================= */
+@media (max-width: 768px) {
+  .tableBody {
+    font-size: 12px !important;
+  }
+
+  .topBar {
+    padding: 12px 16px;
+  }
+
+  /* Make table horizontally scrollable on mobile */
+  .tableBody table {
+    min-width: 480px;
+  }
+
+  /* Touch-friendly button sizes */
+  .leftCell button,
+  .rightCell button {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    padding: 8px !important;
+    border-radius: 6px;
+  }
+
+  /* Larger icons for better touch targets */
+  .leftCell svg,
+  .rightCell svg {
+    font-size: 16px !important;
+  }
+
+  /* Adjust cell padding and spacing */
+  .leftCell,
+  .rightCell {
+    padding: 6px !important;
+    gap: 6px;
+  }
+
+  .keyCell {
+    min-width: 140px;
+    padding: 8px 6px !important;
+  }
+
+  /* More readable field names on mobile */
+  .keyCell .MuiTypography-root {
+    font-size: 13px !important;
+    line-height: 1.3;
+    font-weight: 500;
+  }
+
+  /* Better visual separation */
+  .tableBody tbody tr {
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .tableBody tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  /* Add subtle hover effect for mobile */
+  .tableBody tbody tr:hover {
+    background-color: #f8f9fa;
+  }
+}
+
+/* ===== Small Mobile Styles (max-width: 480px) =================== */
+@media (max-width: 480px) {
+  .tableBody {
+    font-size: 11px !important;
+  }
+
+  .tableBody table {
+    min-width: 420px;
+  }
+
+  .keyCell {
+    min-width: 120px;
+  }
+
+  .keyCell .MuiTypography-root {
+    font-size: 12px !important;
+  }
+
+  /* Compact button layout for very small screens */
+  .leftCell {
+    flex-direction: column !important;
+    gap: 2px;
+    min-width: 50px;
+  }
+
+  .rightCell {
+    flex-wrap: wrap;
+    gap: 2px;
+    min-width: 70px;
+  }
+
+  .leftCell button,
+  .rightCell button {
+    min-width: 40px !important;
+    min-height: 40px !important;
+    padding: 6px !important;
+  }
+
+  .leftCell svg,
+  .rightCell svg {
+    font-size: 14px !important;
+  }
+}
+
+/* ===== Touch Device Optimizations =============================== */
+@media (hover: none) and (pointer: coarse) {
+  /* Touch devices */
+  .leftCell button,
+  .rightCell button {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+
+  /* Increase spacing between touch targets */
+  .leftCell,
+  .rightCell {
+    gap: 8px;
+  }
+
+  /* Touch feedback */
+  .leftCell button:active,
+  .rightCell button:active {
+    transform: scale(0.95);
+    background-color: rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.1s ease;
+  }
+
+  /* Make the entire row more touch-friendly */
+  .tableBody tbody tr {
+    min-height: 52px;
+  }
+}
+
+/* ===== Improved Visual Hierarchy ================================ */
+.keyCell em {
+  color: #999;
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+/* Icon and type indicators */
+.keyCell svg {
+  margin-right: 6px;
+  color: #666;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .keyCell svg {
+    margin-right: 4px;
+  }
+}
+
+/* ===== Button State Improvements ================================ */
+.leftCell button:disabled,
+.rightCell button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.leftCell button:hover:not(:disabled),
+.rightCell button:hover:not(:disabled) {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* ===== Loading States =========================================== */
+.tableBody.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* ===== Accessibility Improvements =============================== */
+@media (prefers-reduced-motion: reduce) {
+  .leftCell button:active,
+  .rightCell button:active {
+    transform: none;
+  }
+
+  .tableBody tbody tr:hover {
+    transition: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+  .leftCell,
+  .rightCell,
+  .keyCell {
+    border: 1px solid;
+  }
+
+
+
+  .topBar {
+    border: 2px solid;
+  }
+
+  .leftCell button,
+  .rightCell button {
+    border: 2px solid;
+  }
+}
+
+/* ===== Focus Management ========================================== */
+.leftCell button:focus,
+.rightCell button:focus {
+  outline: 2px solid #2962ff;
+  outline-offset: 2px;
+}
+
+/* ===== Error States ============================================== */
+.keyCell.error {
+  background-color: #ffeaea;
+  border-left: 3px solid #f44336;
+}
+
+.keyCell.error .MuiTypography-root {
+  color: #d32f2f;
+}
+
+/* ===== Dark Mode Support (if needed) ============================ */
+@media (prefers-color-scheme: dark) {
+  .tableBody {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+  }
+
+  .topBar {
+    background-color: #2a2a2a;
+    border-color: #404040;
+  }
+
+  .tableBody tbody tr {
+    border-color: #404040;
+  }
+
+  .tableBody tbody tr:hover {
+    background-color: #2a2a2a;
+  }
+
+  .keyCell em {
+    color: #888;
+  }
+
+  .keyCell svg {
+    color: #aaa;
+  }
+}
+
+/* ===== Performance Optimizations ================================ */
+.tableBody * {
+  -webkit-tap-highlight-color: transparent;
+}
+
 .tableBody {
-  max-height: 40vh;
-  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Prevent text selection on buttons */
+.leftCell button,
+.rightCell button {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
