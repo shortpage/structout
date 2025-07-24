@@ -1,15 +1,22 @@
 // ─── components/SchemaControls.tsx ──────────────────────────────
 import React from "react";
 import {
-  FormControl, InputLabel, MenuItem, Select,
-  IconButton, Tooltip,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
-import ContentCopyIcon   from "@mui/icons-material/ContentCopy";
-import DownloadIcon      from "@mui/icons-material/Download";
-import Brightness4Icon   from "@mui/icons-material/Brightness4";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import DownloadIcon from "@mui/icons-material/Download";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
 
 import {
-  PROVIDERS, PROVIDER_META, ProviderId, ModelKey,
+  PROVIDERS,
+  PROVIDER_META,
+  ProviderId,
+  ModelKey,
 } from "../utils/providerRegistry";
 
 /* ── SINGLE source of truth ──────────────────────────────────── */
@@ -31,18 +38,18 @@ export interface SchemaControlsProps {
 }
 
 const SchemaControls: React.FC<SchemaControlsProps> = ({
-                                                         isMobile,
-                                                         inHelperView = false,        // default for mobile
-                                                         llmProvider,
-                                                         modelKey,
-                                                         onProviderChange,
-                                                         onModelChange,
-                                                         onCopy,
-                                                         onDownload,
-                                                         onToggleDark,
-                                                         canCopy,
-                                                         canDownload,
-                                                       }) => (
+  isMobile,
+  inHelperView = false, // default for mobile
+  llmProvider,
+  modelKey,
+  onProviderChange,
+  onModelChange,
+  onCopy,
+  onDownload,
+  onToggleDark,
+  canCopy,
+  canDownload,
+}) => (
   <>
     {/* Provider */}
     <FormControl

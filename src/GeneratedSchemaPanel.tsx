@@ -45,13 +45,13 @@ interface Props {
 
 /* ================  Component  ================ */
 const GeneratedSchemaPanel: React.FC<Props> = ({
-                                                 jsonSchema,
-                                                 llmProvider,
-                                                 onProviderChange,
-                                                 modelKey,  // Use this directly from props
-                                                 onModelChange,
-                                                 schemaId,
-                                               }) => {
+  jsonSchema,
+  llmProvider,
+  onProviderChange,
+  modelKey, // Use this directly from props
+  onModelChange,
+  schemaId,
+}) => {
   /* ---------- state ---------- */
   // REMOVED: const [modelKey, setModelKey] = useState<ModelKey>(...) - This was causing the issue
   const [copied, setCopied] = useState(false);
@@ -207,7 +207,7 @@ const GeneratedSchemaPanel: React.FC<Props> = ({
             llmProvider={llmProvider}
             modelKey={safeModelKey}
             onProviderChange={onProviderChange}
-            onModelChange={onModelChange}  // Use the prop handler directly
+            onModelChange={onModelChange} // Use the prop handler directly
             onCopy={copy}
             onDownload={startDownload}
             onToggleDark={() => setDarkMode((d) => !d)}

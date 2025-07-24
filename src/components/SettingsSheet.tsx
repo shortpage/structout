@@ -14,6 +14,7 @@ const SettingsSheet: React.FC<SheetProps> = ({
   open,
   onClose,
   onOpen,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   jsonSchema,
   ...controlProps
 }) => {
