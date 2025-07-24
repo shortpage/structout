@@ -37,7 +37,7 @@ import {
 } from "./contexts/IntroVideoContext";
 import {
   initializeMobileFeatures,
-  useViewportHeight
+  useViewportHeight,
 } from "./utils/mobileUtils";
 
 /**
@@ -58,41 +58,48 @@ function AppContent(): React.JSX.Element {
     // Add meta viewport tag if it doesn't exist
     let viewportMeta = document.querySelector('meta[name="viewport"]');
     if (!viewportMeta) {
-      viewportMeta = document.createElement('meta');
-      viewportMeta.setAttribute('name', 'viewport');
+      viewportMeta = document.createElement("meta");
+      viewportMeta.setAttribute("name", "viewport");
       document.head.appendChild(viewportMeta);
     }
 
     // Set optimal viewport settings for mobile
     viewportMeta.setAttribute(
-      'content',
-      'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+      "content",
+      "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover",
     );
 
     // Add theme-color meta tag for mobile browsers
     let themeColorMeta = document.querySelector('meta[name="theme-color"]');
     if (!themeColorMeta) {
-      themeColorMeta = document.createElement('meta');
-      themeColorMeta.setAttribute('name', 'theme-color');
-      themeColorMeta.setAttribute('content', '#2962ff');
+      themeColorMeta = document.createElement("meta");
+      themeColorMeta.setAttribute("name", "theme-color");
+      themeColorMeta.setAttribute("content", "#2962ff");
       document.head.appendChild(themeColorMeta);
     }
 
     // Add apple-mobile-web-app-capable for iOS
-    let appleMeta = document.querySelector('meta[name="apple-mobile-web-app-capable"]');
+    let appleMeta = document.querySelector(
+      'meta[name="apple-mobile-web-app-capable"]',
+    );
     if (!appleMeta) {
-      appleMeta = document.createElement('meta');
-      appleMeta.setAttribute('name', 'apple-mobile-web-app-capable');
-      appleMeta.setAttribute('content', 'yes');
+      appleMeta = document.createElement("meta");
+      appleMeta.setAttribute("name", "apple-mobile-web-app-capable");
+      appleMeta.setAttribute("content", "yes");
       document.head.appendChild(appleMeta);
     }
 
     // Add apple-mobile-web-app-status-bar-style for iOS
-    let appleStatusMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+    let appleStatusMeta = document.querySelector(
+      'meta[name="apple-mobile-web-app-status-bar-style"]',
+    );
     if (!appleStatusMeta) {
-      appleStatusMeta = document.createElement('meta');
-      appleStatusMeta.setAttribute('name', 'apple-mobile-web-app-status-bar-style');
-      appleStatusMeta.setAttribute('content', 'default');
+      appleStatusMeta = document.createElement("meta");
+      appleStatusMeta.setAttribute(
+        "name",
+        "apple-mobile-web-app-status-bar-style",
+      );
+      appleStatusMeta.setAttribute("content", "default");
       document.head.appendChild(appleStatusMeta);
     }
 
@@ -106,11 +113,11 @@ function AppContent(): React.JSX.Element {
       lastTouchEnd = now;
     };
 
-    document.addEventListener('touchend', preventZoom, false);
+    document.addEventListener("touchend", preventZoom, false);
 
     // Cleanup
     return () => {
-      document.removeEventListener('touchend', preventZoom, false);
+      document.removeEventListener("touchend", preventZoom, false);
     };
   }, []);
 
