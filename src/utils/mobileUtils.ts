@@ -231,9 +231,9 @@ export const useSafeArea = () => {
 /* ------------------------------------------------------------------ */
 /* Performance Optimization Utilities                                */
 /* ------------------------------------------------------------------ */
-export const throttle = <T extends (...args: any[]) => any>(
+export const throttle = <T extends (...args: never[]) => unknown>(
   func: T,
-  delay: number,
+  delay: number
 ): T => {
   let timeoutId: NodeJS.Timeout | null = null;
   let lastExecTime = 0;
@@ -246,13 +246,10 @@ export const throttle = <T extends (...args: any[]) => any>(
       lastExecTime = currentTime;
     } else {
       if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(
-        () => {
-          func(...args);
-          lastExecTime = Date.now();
-        },
-        delay - (currentTime - lastExecTime),
-      );
+      timeoutId = setTimeout(() => {
+        func(...args);
+        lastExecTime = Date.now();
+      }, delay - (currentTime - lastExecTime));
     }
   }) as T;
 };
