@@ -183,7 +183,7 @@ const Workbench: React.FC = () => {
             style={{
               flex: "1 1 auto", // take all remaining width
               display: "flex",
-              justifyContent: "center",  // center horizontally
+              justifyContent: "center", // center horizontally
             }}
           >
             {DEMO_READ_ONLY && <DemoBanner />}
