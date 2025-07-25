@@ -1,0 +1,9 @@
+/* 2-level items */
+.md-nav__item--nested > .md-nav__link {
+  font-size: 0.9rem;
+}
+
+/* 3-level and deeper */
+.md-nav__item--nested .md-nav__item--nested > .md-nav__link {
+  font-size: 0.82rem;
+}
