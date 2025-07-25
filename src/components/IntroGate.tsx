@@ -1,14 +1,26 @@
-// IntroGate.tsx  – drop‑in replacement
+/* ------------------------------------------------------------------
+ * MIT License
+ * Copyright (c) 2025  Sesh Ragavachari
+ *
+ * One‑time "watch intro" gate that now works on first mobile visit
+ * and on demand replays. Fixes:
+ *   • Opens again when IntroVideoContext.showIntro toggles
+ *   • Starts muted, then tries to un‑mute after user gesture
+ *   • Shows Play overlay immediately; only shows "Loading…" spinner
+ *     *after* the user taps Play (solves iOS first‑visit hang)
+ * ------------------------------------------------------------------ */
+
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useIntroVideo } from "../contexts/IntroVideoContext";
 
 interface IntroGateProps {
   videoSrc: string;
+  /** Require the user to watch the full clip before dismissing. */
   forceWatch?: boolean;
 }
 
-const FLAG_KEY = "structout.introSeen";
+const FLAG_KEY = "structout.introSeen"; // bump for new intro versions
 
 export default function IntroGate({
   videoSrc,
@@ -16,64 +28,69 @@ export default function IntroGate({
 }: IntroGateProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  /* ------------------------------------------------------------------
+   * Local UI state
+   * ------------------------------------------------------------------ */
   const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [videoError, setVideoError] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
+  const [awaitingPlayback, setAwaitingPlayback] = useState(false); // ← new
+  const [videoError, setVideoError] = useState(false);
 
-  /* ------------------------------------------------------------------ */
-  /*  Context                                                           */
-  /* ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------
+   * Context (handles localStorage + external replay trigger)
+   * ------------------------------------------------------------------ */
   const { showIntro, dismissIntro } = useIntroVideo();
 
-  /* ------------------------------------------------------------------ */
-  /*  Gate‑opening logic                                                */
-  /* ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------
+   * Decide when to open the modal
+   * ------------------------------------------------------------------ */
   useEffect(() => {
     const firstVisit = !localStorage.getItem(FLAG_KEY);
-
     if (firstVisit || showIntro) {
-      console.log("IntroGate: opening modal (first visit or replay)");
+      console.log("IntroGate: opening intro modal");
       resetStateAndOpen();
     }
   }, [showIntro]);
 
   const resetStateAndOpen = () => {
-    setIsLoading(true);
-    setVideoError(false);
     setHasStarted(false);
+    setAwaitingPlayback(false);
+    setVideoError(false);
     setOpen(true);
   };
 
-  /* ------------------------------------------------------------------ */
-  /*  Video helpers                                                     */
-  /* ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------
+   * Video helpers
+   * ------------------------------------------------------------------ */
   const startVideo = () => {
     if (!videoRef.current) return;
 
-    // iOS/Android require muted first
-    videoRef.current.muted = true;
+    setAwaitingPlayback(true); // spinner shows only after tap
+
+    videoRef.current.muted = true; // mobile‑safe autoplay
     videoRef.current
       .play()
       .then(() => {
         setHasStarted(true);
-        console.log("IntroGate: muted playback ok, attempting un‑mute");
-        videoRef.current!.muted = false; // if browser allows, audio resumes
+        setAwaitingPlayback(false);
+        // Try un‑muting now that playback is user‑initiated
+        videoRef.current!.muted = false;
       })
       .catch((err) => {
         console.error("IntroGate: play() failed", err);
+        setAwaitingPlayback(false);
         setVideoError(true);
       });
   };
 
   const dismiss = () => {
-    dismissIntro(); // writes localStorage & flips showIntro off
+    dismissIntro(); // writes localStorage + resets showIntro flag
     setOpen(false);
   };
 
-  /* ------------------------------------------------------------------ */
-  /*  Render                                                            */
-  /* ------------------------------------------------------------------ */
+  /* ------------------------------------------------------------------
+   * Render
+   * ------------------------------------------------------------------ */
   if (!open) return null;
 
   return createPortal(
@@ -101,12 +118,12 @@ export default function IntroGate({
           background: "#000",
           borderRadius: 12,
           overflow: "hidden",
-          zIndex: 9999,
           boxShadow: "0 16px 40px rgb(0 0 0 / .35)",
+          zIndex: 9999,
         }}
       >
-        {/* Loading state */}
-        {isLoading && (
+        {/* Loading spinner — shown only while waiting after user tap */}
+        {awaitingPlayback && (
           <div
             style={{ color: "#fff", textAlign: "center", padding: "3rem 2rem" }}
           >
@@ -114,25 +131,27 @@ export default function IntroGate({
           </div>
         )}
 
-        {/* Video */}
+        {/* Video element */}
         <video
           ref={videoRef}
           src={videoSrc}
-          muted // mobile‑friendly hint
+          muted /* hint for iOS */
           playsInline
           preload="auto"
           controls={hasStarted && !forceWatch}
-          style={{ width: "100%", display: isLoading ? "none" : "block" }}
-          onLoadedData={() => setIsLoading(false)}
+          style={{
+            width: "100%",
+            display: awaitingPlayback ? "none" : "block",
+          }}
           onError={() => {
-            setIsLoading(false);
+            setAwaitingPlayback(false);
             setVideoError(true);
           }}
           onEnded={forceWatch ? dismiss : undefined}
         />
 
-        {/* Overlay play button */}
-        {!isLoading && !hasStarted && !videoError && (
+        {/* Overlay play button (visible until video actually starts) */}
+        {!hasStarted && !videoError && (
           <div
             onClick={startVideo}
             style={{
@@ -172,7 +191,7 @@ export default function IntroGate({
           </div>
         )}
 
-        {/* Dismiss button */}
+        {/* Dismiss button (hidden if forceWatch) */}
         {!forceWatch && (
           <button
             onClick={dismiss}
