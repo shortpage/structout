@@ -10,13 +10,16 @@ interface IntroGateProps {
 
 const FLAG_KEY = "structout.introSeen";
 
-export default function IntroGate({ videoSrc, forceWatch = false }: IntroGateProps) {
+export default function IntroGate({
+  videoSrc,
+  forceWatch = false,
+}: IntroGateProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const [open,        setOpen]        = useState(false);
-  const [isLoading,   setIsLoading]   = useState(true);
-  const [videoError,  setVideoError]  = useState(false);
-  const [hasStarted,  setHasStarted]  = useState(false);
+  const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [videoError, setVideoError] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
 
   /* ------------------------------------------------------------------ */
   /*  Context                                                           */
@@ -64,7 +67,7 @@ export default function IntroGate({ videoSrc, forceWatch = false }: IntroGatePro
   };
 
   const dismiss = () => {
-    dismissIntro();         // writes localStorage & flips showIntro off
+    dismissIntro(); // writes localStorage & flips showIntro off
     setOpen(false);
   };
 
@@ -104,7 +107,9 @@ export default function IntroGate({ videoSrc, forceWatch = false }: IntroGatePro
       >
         {/* Loading state */}
         {isLoading && (
-          <div style={{ color: "#fff", textAlign: "center", padding: "3rem 2rem" }}>
+          <div
+            style={{ color: "#fff", textAlign: "center", padding: "3rem 2rem" }}
+          >
             Loading intro video…
           </div>
         )}
@@ -113,13 +118,16 @@ export default function IntroGate({ videoSrc, forceWatch = false }: IntroGatePro
         <video
           ref={videoRef}
           src={videoSrc}
-          muted          // mobile‑friendly hint
+          muted // mobile‑friendly hint
           playsInline
           preload="auto"
           controls={hasStarted && !forceWatch}
           style={{ width: "100%", display: isLoading ? "none" : "block" }}
           onLoadedData={() => setIsLoading(false)}
-          onError={() => { setIsLoading(false); setVideoError(true); }}
+          onError={() => {
+            setIsLoading(false);
+            setVideoError(true);
+          }}
           onEnded={forceWatch ? dismiss : undefined}
         />
 
@@ -128,9 +136,13 @@ export default function IntroGate({ videoSrc, forceWatch = false }: IntroGatePro
           <div
             onClick={startVideo}
             style={{
-              position: "absolute", inset: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(0,0,0,.3)", cursor: "pointer",
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "rgba(0,0,0,.3)",
+              cursor: "pointer",
             }}
           >
             <button
@@ -142,7 +154,9 @@ export default function IntroGate({ videoSrc, forceWatch = false }: IntroGatePro
                 borderRadius: 8,
                 fontSize: "1.1rem",
                 fontWeight: 600,
-                display: "flex", gap: ".6rem", alignItems: "center",
+                display: "flex",
+                gap: ".6rem",
+                alignItems: "center",
               }}
             >
               ▶ Play intro
